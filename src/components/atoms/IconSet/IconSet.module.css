@@ -1,0 +1,236 @@
+.page {
+  background: var(--color-bg-app);
+  min-height: 100%;
+  width: 100%;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 64px;
+  padding: 80px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  font-family: 'Literata', serif;
+  font-size: 24px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text-pri);
+}
+
+.subtitle {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 13px;
+  color: var(--color-text-sec);
+  line-height: 1.4;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--color-border-def);
+}
+
+/* Icon Grid */
+.iconGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.iconRow {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.emptyCell {
+  flex-shrink: 0;
+  width: 180px;
+  height: 225px;
+}
+
+/* Icon Card */
+.iconCellWrapper {
+  flex: 1 0 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.specimenCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+}
+
+.mainPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.statesRow {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.labelStack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.iconName {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: var(--color-text-sec);
+  line-height: 1.4;
+}
+
+.iconSublabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  color: var(--color-text-decorative);
+  line-height: 1.3;
+}
+
+/* State Reference Guide */
+.stateGuide {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  padding: 20px 24px;
+}
+
+.stateGuideLabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--color-text-sec);
+  text-transform: uppercase;
+}
+
+.stateGuideGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 32px;
+}
+
+.stateGuideCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.stateGuideRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stateGuideIconName {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 9px;
+  color: var(--color-text-decorative);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Reference Table */
+.refTable {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-card);
+}
+
+.refTableHeader {
+  display: flex;
+  gap: 0;
+  background: var(--color-bg-inset);
+  border-bottom: 1px solid var(--color-border-def);
+  padding: 12px 20px;
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-text-sec);
+}
+
+.refTableRow {
+  display: flex;
+  gap: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border-def);
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: var(--color-text-sec);
+  line-height: 1.4;
+}
+
+.refTableRow:last-child {
+  border-bottom: none;
+}
+
+.refTableRowAlt {
+  background: var(--color-bg-app);
+}
+
+.refCol {
+  flex: 0 0 180px;
+  padding-right: 16px;
+}
+
+.refColWide {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+.refIconName {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--color-text-pri);
+}
+
+/* Footer Note */
+.footerNote {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: var(--color-text-sec);
+  line-height: 1.6;
+  max-width: 700px;
+}

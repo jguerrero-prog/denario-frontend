@@ -1,0 +1,346 @@
+.page {
+  background: var(--color-bg-app);
+  min-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Header */
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 80px;
+}
+
+.pageTitle {
+  font-family: 'Literata', serif;
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  width: 100%;
+}
+
+.pageSubtitle {
+  font-family: 'Literata', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--color-text-sec);
+  width: 100%;
+}
+
+.headerLine {
+  border: none;
+  border-top: 1px solid var(--color-border-def);
+}
+
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  padding: 60px 80px 0;
+}
+
+.sectionLabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--color-text-mut);
+  padding-bottom: 32px;
+}
+
+/* Archetype */
+.archetypeCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.archetypeText {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--color-text-pri);
+}
+
+.archetypeTitle {
+  font-family: 'Literata', serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.archetypeBody {
+  font-family: 'Literata', serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.traitsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.traitItem {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.traitTitle {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+}
+
+.traitDesc {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: var(--color-text-sec);
+  line-height: 1.4;
+}
+
+/* Principles */
+.principleStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.principleCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.principleHeader {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.principleNum {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: #2D6A2D;
+  white-space: nowrap;
+}
+
+.principleTitle {
+  font-family: 'Literata', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  flex: 1 0 0;
+}
+
+.principleBody {
+  font-family: 'Literata', serif;
+  font-size: 14px;
+  color: var(--color-text-sec);
+  line-height: 1.6;
+}
+
+.exampleRow {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.avoidCol,
+.useCol {
+  flex: 1 0 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.avoidLabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #C44D2D;
+  white-space: nowrap;
+}
+
+.avoidText {
+  font-family: 'Literata', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-text-mut);
+  line-height: 1.5;
+}
+
+.useLabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #2D6A2D;
+  white-space: nowrap;
+}
+
+.useText {
+  font-family: 'Literata', serif;
+  font-size: 13px;
+  color: var(--color-text-pri);
+  line-height: 1.5;
+}
+
+/* Comparison Table */
+.comparisonTable {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.comparisonHeader {
+  display: flex;
+  background: var(--color-bg-inset);
+  border-bottom: 1px solid var(--color-border-def);
+  padding: 20px;
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.avoidHeaderCell {
+  flex: 1 0 0;
+  color: #C44D2D;
+}
+
+.useHeaderCell {
+  flex: 1 0 0;
+  color: #2D6A2D;
+}
+
+.comparisonRow {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--color-border-def);
+  gap: 0;
+}
+
+.comparisonRow:last-child {
+  border-bottom: none;
+}
+
+.comparisonRowAlt {
+  background: var(--color-bg-app);
+}
+
+.comparisonAvoid {
+  flex: 1 0 0;
+  font-family: 'Literata', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-text-sec);
+  padding-right: 20px;
+  line-height: 1.5;
+}
+
+.comparisonUse {
+  flex: 1 0 0;
+  font-family: 'Literata', serif;
+  font-size: 13px;
+  color: var(--color-text-pri);
+  line-height: 1.5;
+}
+
+/* Stage Cards */
+.stagesIntro {
+  font-family: 'Literata', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--color-text-sec);
+  padding-bottom: 0;
+  margin-bottom: 24px;
+}
+
+.stageCards {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding-bottom: 80px;
+}
+
+.stageCard {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.stageHeader {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.stageNum {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #2D6A2D;
+  background: #DEEADE;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.stageName {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  flex: 1 0 0;
+}
+
+.stageRows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.copyRow {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.copyLabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-mut);
+  width: 100px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.copyText {
+  font-family: 'Literata', serif;
+  font-size: 13px;
+  color: var(--color-text-pri);
+  flex: 1 0 0;
+  line-height: 1.5;
+}

@@ -1,0 +1,385 @@
+.page {
+  background: #0E0E10;
+  color: #FFFFFF;
+  min-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Page Header */
+.pageHeader {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.pageHeaderInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 80px 80px 40px;
+}
+
+.pageTitle {
+  font-family: 'Literata', serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.pageSubtitle {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 13px;
+  color: #52525B;
+}
+
+.headerLine {
+  border: none;
+  border-top: 1px solid #27272A;
+}
+
+/* Sections */
+.section {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 120px;
+}
+
+.sectionLabelRow {
+  padding: 24px 80px;
+}
+
+.sectionLabel {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #52525B;
+}
+
+/* Bands */
+.bandsStack {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Primary Mark */
+.primaryMarkDemo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100px 80px;
+  gap: 40px;
+}
+
+.primaryMarkCenter {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  align-items: center;
+}
+
+.dimensionAnnotations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 640px;
+}
+
+.widthAnnotation {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.annotationLine {
+  flex: 1 0 0;
+  height: 1px;
+  background: #3F3F46;
+}
+
+.annotationCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #52525B;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.annotationNote {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  color: #52525B;
+  flex: 1 0 0;
+  text-align: center;
+}
+
+.heightAnnotations {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.heightLeft {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 80px;
+}
+
+.sectionNotes {
+  display: flex;
+  gap: 80px;
+  padding: 0 80px;
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: #6A6661;
+  line-height: 1.6;
+}
+
+.noteText {
+  flex: 1 0 0;
+  min-width: 0;
+}
+
+/* Convergence Variant */
+.convergenceDemo {
+  display: flex;
+  flex-direction: column;
+  gap: 80px;
+  align-items: center;
+  padding: 80px 0;
+}
+
+.convergenceLockup {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.wordmarkText {
+  font-family: 'Literata', serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.convergenceNote {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: #6A6661;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 600px;
+}
+
+/* Wordmark Lockups */
+.lockupsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 64px 80px;
+  padding: 0 80px;
+}
+
+.lockupItem {
+  flex: 1 0 calc(50% - 40px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.lockupDisplay {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lockupDisplayRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.lockupWordmarkLg {
+  font-family: 'Literata', serif;
+  font-size: 48px;
+  font-weight: 600;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.lockupWordmarkLight {
+  color: #1C1C18;
+}
+
+.lockupTagline {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 13px;
+  color: #52525B;
+}
+
+.lockupTaglineLight {
+  color: #8B837C;
+}
+
+.lockupWordmarkSm {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.lockupMonogram {
+  font-family: 'Literata', serif;
+  font-size: 80px;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.lockupDesc {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: #52525B;
+  line-height: 1.6;
+}
+
+.lockupDescLight {
+  color: #8B837C;
+}
+
+.colorBar {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.lockupFootnote {
+  padding: 40px 80px 0;
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: #6A6661;
+  line-height: 1.6;
+}
+
+/* Scale Variants */
+.scaleRow {
+  display: flex;
+  gap: 48px;
+  align-items: flex-end;
+  padding: 0 80px;
+  overflow-x: auto;
+}
+
+.scaleItem {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.squareVariant {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.scaleLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.scaleName {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: #52525B;
+}
+
+.scaleCode {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #6A6661;
+}
+
+.scaleNote {
+  padding: 80px 80px 0;
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  color: #6A6661;
+  line-height: 1.6;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 60px;
+  padding-bottom: 80px;
+  padding-top: 40px;
+}
+
+.footerLine {
+  border: none;
+  border-top: 1px solid #27272A;
+}
+
+.footerInner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 80px;
+}
+
+.swatches {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.swatchItem {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.swatchColor {
+  width: 48px;
+  height: 48px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.swatchLabels {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swatchName {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 10px;
+  color: #52525B;
+}
+
+.swatchHex {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #8B837C;
+}
+
+.footerVersion {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 11px;
+  color: #52525B;
+}

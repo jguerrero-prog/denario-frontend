@@ -1,0 +1,532 @@
+/* ── Root layout ── */
+
+.layout {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--color-bg-app);
+  padding: 12px 0 12px 12px;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════════════
+   MAIN AREA
+══════════════════════════════════════════════ */
+
+.main {
+  flex: 1;
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Top bar */
+
+.topBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.panelToggleBtn {
+  pointer-events: all;
+  background: #F4F4F4;
+  border: 1px solid var(--color-border-def);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-sec);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.panelToggleBtn:hover {
+  background: var(--color-border-def);
+}
+
+/* Content viewport — centers the stack */
+
+.contentViewport {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 48px 24px 40px;
+}
+
+.contentStack {
+  width: 560px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prompt header */
+
+.promptHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 32px;
+  padding-top: 28px;
+}
+
+.promptHeaderAttached {
+  padding-bottom: 8px;
+}
+
+.promptHeading {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 24px;
+  color: var(--color-text-pri);
+  line-height: 1.3;
+}
+
+.promptSub {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--color-text-sec);
+}
+
+/* File chip */
+
+.fileChipRow {
+  padding: 8px 0 20px;
+}
+
+.fileChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-brand-light);
+  border: 1px solid #C4D9C4;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.fileChipName {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-brand);
+  white-space: nowrap;
+}
+
+.fileChipDivider {
+  width: 1px;
+  height: 10px;
+  background: #C4D9C4;
+  flex-shrink: 0;
+}
+
+.fileChipSize {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-mut);
+  white-space: nowrap;
+}
+
+.fileChipDismiss {
+  background: none;
+  border: none;
+  padding: 0 0 0 4px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  line-height: 0;
+}
+
+/* Input card */
+
+.inputCard {
+  background: var(--color-bg-card);
+  border: var(--border-default) solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.03);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.inputArea {
+  width: 100%;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-pri);
+  line-height: 1.5;
+  min-height: 60px;
+}
+
+.inputCardAttached {
+  border-width: 1.5px;
+}
+
+.inputArea::placeholder {
+  color: var(--color-text-decorative);
+  font-style: italic;
+}
+
+/* Typed content (attached state) */
+
+.inputContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+.inputText {
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-pri);
+  line-height: 1.6;
+}
+
+.inputToolsRow {
+  display: flex;
+  align-items: center;
+}
+
+.inputToolsText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text-sec);
+}
+
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.inputCursor {
+  display: inline-block;
+  width: 1.5px;
+  height: 16px;
+  background: var(--color-text-pri);
+  flex-shrink: 0;
+  margin-left: 1px;
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+}
+
+/* ── Tool suggestions ── */
+
+.toolsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toolsDivider {
+  height: 1px;
+  background: var(--color-border-def);
+}
+
+.toolsTabRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.toolsTab {
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-decorative);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: color 0.1s;
+}
+
+.toolsTab:hover {
+  color: var(--color-text-sec);
+}
+
+.toolsTabActive {
+  color: var(--color-text-pri) !important;
+  font-weight: 600;
+}
+
+.toolsChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.toolChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--color-border-def);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.toolChip:hover {
+  background: var(--color-bg-app);
+  border-color: var(--color-text-mut);
+}
+
+.toolChipAdded {
+  background: var(--color-brand-light) !important;
+  border-color: var(--color-border-str) !important;
+  color: var(--color-brand) !important;
+}
+
+.toolChipCheck {
+  font-size: 10px;
+}
+
+.inputCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Attached info (replaces attach button when file present) */
+
+.attachedInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-brand);
+}
+
+.attachedInfoIcon {
+  display: flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.attachedInfoText {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-brand);
+  white-space: nowrap;
+}
+
+.attachBtnWrapper {
+  position: relative;
+}
+
+.attachBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-decorative);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.attachBtn:hover {
+  color: var(--color-text-sec);
+}
+
+.attachTooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #21211F;
+  border-radius: 6px;
+  height: 28px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: #F2F2ED;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+/* Downward caret */
+.attachTooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #21211F;
+}
+
+.attachBtnWrapper:hover .attachTooltip {
+  opacity: 1;
+}
+
+.beginBtn {
+  background: var(--color-brand);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.beginBtn:hover {
+  background: var(--color-brand-dark);
+}
+
+.beginBtnAttached {
+  font-size: 14px;
+  border-radius: 10px;
+}
+
+/* Word count */
+
+.wordCount {
+  padding-top: 8px;
+  width: 100%;
+  text-align: right;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-decorative);
+}
+
+/* Recent projects */
+
+.recentSection {
+  padding-top: 72px;
+  display: flex;
+  flex-direction: column;
+}
+
+.recentSectionAttached {
+  padding-top: 48px;
+}
+
+.recentLabel {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 10px;
+  color: #8B837C;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.projectList {
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.projectRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+}
+
+.projectRowBorder {
+  border-bottom: 1px solid var(--color-border-def);
+}
+
+.projectLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.projectFolderIcon {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-sec);
+}
+
+.projectName {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--color-text-pri);
+  white-space: nowrap;
+}
+
+.stageBadge {
+  background: var(--color-brand-light);
+  border: 1px solid var(--color-border-str);
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--color-brand);
+  white-space: nowrap;
+}
+
+.projectRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lastOpened {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--color-text-decorative);
+  white-space: nowrap;
+}
+
+.continueLink {
+  background: none;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--color-text-mut);
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.continueLink:hover {
+  color: var(--color-text-pri);
+}

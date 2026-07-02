@@ -1,0 +1,235 @@
+/* ── Overlay ── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.96);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ── */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 24px;
+  flex-shrink: 0;
+}
+
+.backLink {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 400;
+  color: #2d6a2d;
+  padding: 0;
+  flex: 1;
+  text-align: left;
+  transition: opacity 0.12s;
+}
+
+.backLink:hover { opacity: 0.8; }
+
+.topCenter {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: #e5e5e5;
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.counter {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: #a0a0a0;
+}
+
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  color: #ccc;
+  transition: background 0.12s, color 0.12s;
+}
+
+.closeBtn:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+
+/* ── Main area ── */
+
+.mainArea {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 24px 80px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Nav arrows ── */
+
+.navBtn {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 28px;
+  line-height: 1;
+  color: #ccc;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+  padding: 0 0 2px 0;
+}
+
+.navBtn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); color: #fff; }
+.navBtn:disabled { opacity: 0.25; cursor: default; }
+
+/* ── Plot card ── */
+
+.plotCard {
+  flex: 1 1 0;
+  max-width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.chartArea {
+  width: 100%;
+  aspect-ratio: 860 / 520;
+  overflow: hidden;
+}
+
+.chartSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.plotImg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  background: #fff;
+}
+
+.caption {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: #999;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* ── Bottom thumbnail strip ── */
+
+.thumbStrip {
+  height: 80px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.thumbRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.thumb {
+  width: 128px;
+  height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  padding: 0;
+}
+
+.thumb:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.thumbActive {
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.thumbIcon {
+  color: #a0a0a0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumbActive .thumbIcon { color: #d0d0d0; }
+
+.thumbLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  color: #666;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.thumbActive .thumbLabel { color: #aaa; }
+
+.activeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transition: transform 0.2s;
+}

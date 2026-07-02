@@ -1,0 +1,682 @@
+/* ── Layout ── */
+
+.layout {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  background: var(--color-bg-app);
+  overflow: hidden;
+}
+
+.main {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Top bar (shared) ── */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--color-border-def);
+  flex-shrink: 0;
+  background: var(--color-bg-app);
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+
+.backLink:hover { color: var(--color-text-pri); }
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.breadcrumbDim    { color: var(--color-text-mut); font-weight: 400; }
+.breadcrumbSep    { color: var(--color-text-decorative); }
+.breadcrumbActive { color: var(--color-text-pri); font-weight: 600; }
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--color-text-sec);
+  transition: color 0.12s;
+}
+
+.iconBtn:hover { color: var(--color-text-pri); }
+
+.topBarTextBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  padding: 0;
+  transition: color 0.12s;
+}
+
+.topBarTextBtn:hover { color: var(--color-text-pri); }
+
+.saveBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 14px;
+  background: var(--color-brand);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.3;
+  transition: background 0.12s;
+}
+
+.saveBtn:hover { background: var(--color-brand-dark); }
+
+/* ── PDF page counter ── */
+
+.pageCounter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pageNavBtn {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--color-border-def);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-text-sec);
+  transition: color 0.12s, border-color 0.12s;
+  padding: 0;
+}
+
+.pageNavBtn:hover:not(:disabled) { color: var(--color-text-pri); border-color: var(--color-border-str); }
+.pageNavBtn:disabled { opacity: 0.35; cursor: default; }
+
+.pageCounterText {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-mut);
+  white-space: nowrap;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* ── PDF scroll area ── */
+
+.pdfScrollArea {
+  flex: 1 1 0;
+  overflow-y: auto;
+  background: #f0ede8;
+  display: flex;
+  justify-content: center;
+  padding: 40px 24px;
+}
+
+/* ── PDF paper page ── */
+
+.pdfPage {
+  background: #fff;
+  width: 100%;
+  max-width: 680px;
+  min-height: 880px;
+  padding: 48px 52px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.pdfPageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid #d1d5db;
+}
+
+.pdfPageHeaderLeft,
+.pdfPageHeaderRight {
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: #9ca3af;
+  line-height: 1.3;
+}
+
+.pdfTitleBlock {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pdfTitle {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.4;
+  margin: 0 0 8px;
+}
+
+.pdfAuthor {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 400;
+  color: #374151;
+  line-height: 1.3;
+  margin: 0 0 2px;
+}
+
+.pdfAffil {
+  font-family: var(--font-body);
+  font-size: 9px;
+  font-style: italic;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.pdfBody {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  flex: 1;
+}
+
+.pdfCol {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pdfSectionLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  margin: 6px 0 2px;
+}
+
+.pdfProse {
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 400;
+  color: #374151;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.pdfFigure {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: 12px;
+}
+
+.pdfChart {
+  width: 100%;
+  height: auto;
+}
+
+.pdfFigureCaption {
+  font-family: var(--font-body);
+  font-size: 8px;
+  color: #9ca3af;
+  line-height: 1.3;
+  margin: 0;
+  font-style: italic;
+}
+
+.pdfTable {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pdfTableEl {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-body);
+  font-size: 8.5px;
+}
+
+.pdfTh {
+  padding: 4px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: #111827;
+  border-bottom: 0.75px solid #374151;
+  border-top: 0.75px solid #374151;
+}
+
+.pdfTd {
+  padding: 4px 8px;
+  color: #374151;
+  border-bottom: 0.5px solid #e5e7eb;
+}
+
+.pdfPageNum {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-body);
+  font-size: 9px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* ── TeX file tab ── */
+
+.texFileTab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--color-border-def);
+  background: var(--color-bg-inset);
+  flex-shrink: 0;
+}
+
+.texTabLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.texTabDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.texTabName {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-pri);
+  line-height: 1.3;
+}
+
+.texTabMeta {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-mut);
+  line-height: 1.3;
+}
+
+.texBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: var(--color-bg-active);
+  border: 1px solid var(--color-border-str);
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-brand);
+  line-height: 1.3;
+}
+
+/* ── TeX editor ── */
+
+.texEditorWrap {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: row;
+  overflow: auto;
+  background: var(--color-bg-inset);
+  min-height: 0;
+}
+
+.texLineNums {
+  flex-shrink: 0;
+  width: 44px;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  background: var(--color-bg-inset);
+  border-right: 1px solid var(--color-border-def);
+  user-select: none;
+}
+
+.texLineNum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-decorative);
+  line-height: 20px;
+  text-align: right;
+  padding-right: 12px;
+}
+
+.texTextarea {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--color-bg-inset);
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 20px 24px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-pri);
+  line-height: 20px;
+  caret-color: var(--color-brand);
+  tab-size: 2;
+}
+
+/* ── Dirty bar ── */
+
+.dirtyBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  background: #fefce8;
+  border-top: 1px solid #fde68a;
+  flex-shrink: 0;
+}
+
+.dirtyDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
+}
+
+.dirtyText {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  color: #92400e;
+  flex: 1;
+}
+
+.dirtyRegenBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #d97706;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* ── Overwrite dialog ── */
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dialog {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  width: 420px;
+  max-width: calc(100vw - 48px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+
+.dialogHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dialogHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dialogTitle {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.dialogClose {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-mut);
+  border-radius: 4px;
+  padding: 0;
+  transition: color 0.12s;
+}
+
+.dialogClose:hover { color: var(--color-text-pri); }
+
+.dialogBody {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.dialogFileRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--color-bg-inset);
+  border: 1px solid var(--color-border-def);
+  border-radius: 8px;
+}
+
+.dialogFileDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d97706;
+  flex-shrink: 0;
+}
+
+.dialogFileName {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-pri);
+  flex: 1;
+}
+
+.dialogFileModified {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #d97706;
+  white-space: nowrap;
+}
+
+.dialogOptionsLabel {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-mut);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.dialogOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dialogOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border-def);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+  background: var(--color-bg-app);
+}
+
+.dialogOptionSelected {
+  background: var(--color-bg-active);
+  border-color: var(--color-border-str);
+}
+
+.dialogOption:hover {
+  background: var(--color-bg-inset);
+}
+
+.dialogRadio {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--color-brand);
+  width: 14px;
+  height: 14px;
+}
+
+.dialogOptionText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dialogOptionLabel {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-pri);
+  line-height: 1.3;
+}
+
+.dialogOptionDesc {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-text-mut);
+  line-height: 1.3;
+}
+
+.dialogFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.dialogCancelBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  background: none;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-sec);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dialogCancelBtn:hover { background: var(--color-bg-inset); }
+
+.dialogContinueBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: var(--color-brand);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dialogContinueBtn:hover { background: var(--color-brand-dark); }
