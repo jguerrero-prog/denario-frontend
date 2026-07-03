@@ -282,6 +282,15 @@ export function ConversationThread({ stageId }: ConversationThreadProps) {
   const messages = usePipelineStore(s => s.pipeline?.messages ?? []);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Input stage requires no track choice — auto-start it silently on mount.
+  useEffect(() => {
+    if (stageId !== 'input') return;
+    const stage = usePipelineStore.getState().pipeline?.stages.input;
+    if (stage?.status === 'idle') {
+      startStage('input', 'fast');
+    }
+  }, [stageId]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);

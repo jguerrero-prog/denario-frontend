@@ -129,6 +129,21 @@ interface PaperCardProps extends CardProps {
   onOpenTexFull?: () => void;
 }
 
+// Input stage — no card chrome, just a conversational confirmation + proceed button.
+// The right panel shows the actual description content.
+function InputResultCard({ onApprove }: Pick<CardProps, 'onApprove'>) {
+  return (
+    <div className={styles.inputConfirm}>
+      <p className={styles.inputConfirmText}>
+        I've recorded your data description and tool preferences. Review them in the panel on the right, then generate your hypothesis when ready.
+      </p>
+      <button className={styles.primaryBtn} onClick={onApprove}>
+        Generate Hypothesis →
+      </button>
+    </div>
+  );
+}
+
 function IdeaResultCard({ result, onApprove, onOpenFull }: CardProps) {
   const ideaData = result.stageData as IdeaResultData | undefined;
   const [isEditing, setIsEditing] = useState(false);
@@ -667,6 +682,7 @@ export function StageResultCard({ stageId }: { stageId: StageId }) {
 
   const props = { result, onApprove: handleApprove };
   switch (stageId) {
+    case 'input':      return <InputResultCard onApprove={handleApprove} />;
     case 'idea':       return <IdeaResultCard {...props} onOpenFull={handleOpenFull} />;
     case 'methods':    return <MethodsResultCard {...props} onOpenFull={handleOpenFull} />;
     case 'analysis':   return <AnalysisResultCard {...props} />;
@@ -674,6 +690,6 @@ export function StageResultCard({ stageId }: { stageId: StageId }) {
     case 'literature': return <LiteratureResultCard {...props} />;
     case 'referee':    return <RefereeResultCard {...props} />;
     case 'keywords':   return <KeywordsResultCard {...props} />;
-    default:           return <IdeaResultCard {...props} />;
+    default:           return null;
   }
 }

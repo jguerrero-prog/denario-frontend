@@ -1,3 +1,19 @@
+/* ── Input confirmation (no card chrome — renders inside DenarioBubble) ── */
+.inputConfirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.inputConfirmText {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--color-text-sec);
+  line-height: 1.55;
+  margin: 0;
+}
+
 /* ── Error card ── */
 .errorCard {
   display: flex;

@@ -46,8 +46,8 @@ export interface Message {
 export interface IdeaResultData {
   kind: 'idea';
   hypothesis: string;
-  scopeNote: { title: string; body: string } | null;
-  researchFraming: string;
+  scopeNote?: { title: string; body: string } | null;
+  researchFraming?: string;
   methodologyTags: string[];
   loopLog: string[];
   stageOutput: string;

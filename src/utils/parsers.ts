@@ -44,37 +44,61 @@ function extractQuoteLines(md: string): string[] {
     .map(l => l.slice(2).trim());
 }
 
+// Parse a ## Tags section written by the backend: "A, B, C" → ["A", "B", "C"]
+// Returns null if the section is absent so callers can decide the fallback.
+function extractTagsSection(md: string): string[] | null {
+  const section = extractSection(md, 'Tags');
+  if (!section) return null;
+  const tags = section.split(',').map(t => t.trim()).filter(Boolean);
+  return tags.length > 0 ? tags : null;
+}
+
 // ── Per-stage parsers ─────────────────────────────────────────────────────────
 
 function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
   const mockData = mock.stageData as IdeaResultData;
 
+  const paras = content.split(/\n{2,}/);
+
+  // Title: prefer # heading; fall back to a plain first-line title (single unwrapped line)
+  const mdTitle = extractTitle(content);
+  const plainTitle =
+    !mdTitle && paras[0] && !paras[0].includes('\n') ? paras[0].trim() : null;
+  const titleText = mdTitle ?? plainTitle;
+
+  // Skip the plain-text title paragraph when searching for hypothesis body
+  const bodyContent = plainTitle ? paras.slice(1).join('\n\n') : content;
+
   const hypothesis =
-    extractSection(content, 'Hypothesis', 'Research Hypothesis', 'Research Question') ??
-    firstParagraph(content) ??
+    extractSection(bodyContent, 'Hypothesis', 'Research Hypothesis', 'Research Question') ??
+    firstParagraph(bodyContent) ??
     mockData.hypothesis;
 
-  const framing =
-    extractSection(content, 'Research Framing', 'Framing', 'Context') ??
-    mockData.researchFraming;
-
-  const scopeBody = extractSection(content, 'Scope', 'Limitations', 'Scope Note');
-
+  // Extract real sections — no mock fallback for domain-specific fields.
+  // If the backend didn't emit a section, leave the field undefined so the UI hides it.
+  const framing   = extractSection(bodyContent, 'Research Framing', 'Framing') ?? undefined;
+  const scopeBody = extractSection(bodyContent, 'Scope', 'Limitations', 'Scope Note') ?? undefined;
   const loopLines = extractQuoteLines(content);
+  const tags      = extractTagsSection(content) ?? [];
 
   const stageData: IdeaResultData = {
     ...mockData,
     hypothesis,
-    researchFraming: framing ?? mockData.researchFraming,
+    researchFraming: framing,
     scopeNote: scopeBody
       ? { title: 'Scope constraint', body: scopeBody }
-      : mockData.scopeNote,
-    loopLog: loopLines.length > 0 ? loopLines : mockData.loopLog,
+      : null,
+    // loopLog — adversarial loop internals are not surfaced in idea.md; hide rather than mock
+    loopLog: loopLines.length > 0 ? loopLines : [],
+    // methodologyTags — reuse the same tags the backend generated
+    methodologyTags: tags.length > 0 ? tags : [],
+    // stageOutput and meta are generic/non-domain — keep from mock
   };
 
   return {
-    title: extractTitle(content) ?? mock.title,
+    title: titleText ?? mock.title,
     content: hypothesis,
+    tags,
     stageData,
   };
 }

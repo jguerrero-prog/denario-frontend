@@ -110,7 +110,9 @@ function IdeaReadingView({ result }: { result: StageResult }) {
       <p className={styles.readingTitle}>{result.title}</p>
       <p className={styles.readingProse}>{hypothesis}</p>
       {scopeNote && (
-        <p className={styles.readingScopeNote}>{scopeNote}</p>
+        <p className={styles.readingScopeNote}>
+          {typeof scopeNote === 'string' ? scopeNote : `${scopeNote.title} — ${scopeNote.body}`}
+        </p>
       )}
     </div>
   );
@@ -303,6 +305,24 @@ function KeywordsReadingView({ result }: { result: StageResult }) {
   );
 }
 
+function InputReadingView() {
+  const inputText      = usePipelineStore(s => s.pipeline?.inputText ?? '');
+  const preferredTools = usePipelineStore(s => s.pipeline?.preferredTools ?? '');
+
+  return (
+    <div className={styles.readingView}>
+      <p className={styles.readingSectionLabel}>Data description</p>
+      <p className={styles.readingProse}>{inputText}</p>
+      {preferredTools && (
+        <>
+          <p className={styles.readingSectionLabel}>Preferred tools</p>
+          <p className={styles.readingProse}>{preferredTools}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function GenericReadingView({ result }: { result: StageResult }) {
   return (
     <div className={styles.readingView}>
@@ -314,6 +334,8 @@ function GenericReadingView({ result }: { result: StageResult }) {
 
 function PanelReadingView({ stageId }: { stageId: StageId }) {
   const result = usePipelineStore(s => s.pipeline?.stages[stageId]?.result);
+
+  if (stageId === 'input') return <InputReadingView />;
   if (!result) return null;
 
   switch (stageId) {

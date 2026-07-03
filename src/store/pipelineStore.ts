@@ -69,14 +69,7 @@ function buildPipeline(id: string, inputText: string, inputFile?: InputFile): Pi
         stageId: 'input',
         timestamp: now,
       },
-      {
-        id: 'msg-2',
-        role: 'denario',
-        type: 'stage-prompt',
-        content: STAGE_CONFIG.input.denarioOpener,
-        stageId: 'input',
-        timestamp: now + 500,
-      },
+      // No initial stage-prompt — input stage auto-starts on page load
     ],
     createdAt: now,
     updatedAt: now,

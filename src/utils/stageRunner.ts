@@ -31,7 +31,6 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       stageId, track, file: 'workspace',
       title: 'Research Scope Configured',
       content: 'Dataset and research question validated. Tools and preferred libraries recorded.',
-      tags: ['CO2', 'Temperature', 'Time-series'],
       durationLabel: fast ? '11 sec' : '24 sec',
       generatedAt: Date.now(),
     },
