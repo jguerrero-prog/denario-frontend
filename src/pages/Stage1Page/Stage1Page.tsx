@@ -131,7 +131,7 @@ export function Stage1Page({ variant = 'idle' }: { variant?: Stage1Variant }) {
     });
   }
 
-  const chosenAction = variant === 'complete' ? 'Fast Track — Quick pass' : 'Standard — Adversarial loop';
+  const chosenAction = variant === 'complete' ? 'Standard' : 'Rigorous';
 
   const composePlaceholder = variant === 'complete'
     ? 'Ask Denario to refine the hypothesis…'
@@ -189,18 +189,18 @@ export function Stage1Page({ variant = 'idle' }: { variant?: Stage1Variant }) {
 
               <p className={styles.aiText}>
                 {variant === 'complete'
-                  ? 'Research scope captured. Fast Track works for exploratory work.'
-                  : 'Research scope captured. For a submission-quality study, Standard is the stronger choice — the adversarial loop stress-tests the hypothesis before you commit to it. Fast Track works for exploratory work. Which would you prefer?'
+                  ? 'Research scope captured. Standard works for exploratory work.'
+                  : 'Research scope captured. For a submission-quality study, Rigorous is the stronger choice — it stress-tests the hypothesis before you commit to it. Standard works for exploratory work. Which would you prefer?'
                 }
               </p>
 
               {variant === 'idle' && (
                 <div className={styles.aiActions}>
                   <div className={styles.aiActionRow}>
-                    <button className={styles.actionPrimary}>Standard — Adversarial loop</button>
-                    <button className={styles.actionSecondary}>Fast Track — Quick pass</button>
+                    <button className={styles.actionPrimary}>Rigorous</button>
+                    <button className={styles.actionSecondary}>Standard</button>
                   </div>
-                  <p className={styles.actionHint}>Standard is recommended for peer-review submissions.</p>
+                  <p className={styles.actionHint}>Rigorous is recommended for peer-review submissions.</p>
                 </div>
               )}
             </div>
@@ -245,7 +245,7 @@ export function Stage1Page({ variant = 'idle' }: { variant?: Stage1Variant }) {
                       <div className={styles.greenDotSm} />
                       <span className={styles.ideaFileName}>idea.md</span>
                     </div>
-                    <span className={styles.ideaCardBadge}>Generated · Fast Track</span>
+                    <span className={styles.ideaCardBadge}>Generated · Standard</span>
                   </div>
                   <h2 className={styles.ideaTitle}>
                     Temporal Correlation Between Atmospheric CO₂ Concentration and Surface Temperature Anomalies (2019–2024)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../store/pipelineStore';
-import { startStage } from '../../utils/stageRunner';
+import { startStage, stopStage } from '../../utils/stageRunner';
 import { StageResultCard } from './ResultCards/ResultCards';
 import type { Message, StageId } from '../../types/pipeline';
 import styles from './StagePage.module.css';
@@ -135,22 +136,30 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
   );
 }
 
+const TRACK_STAGES = new Set<StageId>(['idea', 'methods']);
+// Stages whose entry point is a button on the previous stage's result card — no prompt button needed.
+const NO_PROMPT_BUTTON_STAGES = new Set<StageId>(['analysis']);
+
 function StagePromptBubble({ message }: { message: Message }) {
   const setStageTrack = usePipelineStore(s => s.setStageTrack);
   const addMessage = usePipelineStore(s => s.addMessage);
   const pipeline = usePipelineStore(s => s.pipeline);
   const stageId = message.stageId!;
   const stage = pipeline?.stages[stageId];
+  const hasTrackChoice = TRACK_STAGES.has(stageId as StageId);
+  const hasPromptButton = !NO_PROMPT_BUTTON_STAGES.has(stageId as StageId);
 
   // If stage already has a track chosen, don't show buttons
   const isDecided = stage?.track !== undefined;
 
-  function choose(track: 'fast' | 'standard') {
+  function choose(track: 'standard' | 'rigorous') {
     setStageTrack(stageId, track);
     addMessage({
       role: 'user',
       type: 'text',
-      content: track === 'fast' ? 'Fast Track — Quick pass' : 'Standard — Adversarial loop',
+      content: hasTrackChoice
+        ? (track === 'standard' ? 'Standard' : 'Rigorous')
+        : 'Generate →',
       stageId,
     });
     startStage(stageId, track);
@@ -158,17 +167,53 @@ function StagePromptBubble({ message }: { message: Message }) {
 
   return (
     <DenarioBubble message={message}>
-      {!isDecided && (
+      {!isDecided && hasPromptButton && (
         <div className={styles.aiActions}>
-          <div className={styles.aiActionRow}>
+          {hasTrackChoice ? (
+            <>
+              <div className={styles.aiActionRow}>
+                <button className={styles.actionPrimary} onClick={() => choose('rigorous')}>
+                  Rigorous
+                </button>
+                <button className={styles.actionSecondary} onClick={() => choose('standard')}>
+                  Standard
+                </button>
+              </div>
+              <p className={styles.actionHint}>Rigorous is recommended for peer-review submissions.</p>
+            </>
+          ) : (
             <button className={styles.actionPrimary} onClick={() => choose('standard')}>
-              Standard — Adversarial loop
+              Generate →
             </button>
-            <button className={styles.actionSecondary} onClick={() => choose('fast')}>
-              Fast Track — Quick pass
-            </button>
-          </div>
-          <p className={styles.actionHint}>Standard is recommended for peer-review submissions.</p>
+          )}
+        </div>
+      )}
+    </DenarioBubble>
+  );
+}
+
+// Denario's elaboration on a clicked scope-constraint suggestion chip.
+function SuggestionFollowupBubble({ message }: { message: Message }) {
+  const addMessage = usePipelineStore(s => s.addMessage);
+  const [acted, setActed] = useState(false);
+
+  function handleAct() {
+    setActed(true);
+    addMessage({
+      role: 'denario',
+      type: 'text',
+      content: "Noted — I'll factor this into the next revision.",
+      stageId: message.stageId,
+    });
+  }
+
+  return (
+    <DenarioBubble message={message}>
+      {!acted && message.actionLabel && (
+        <div className={styles.aiActions}>
+          <button className={styles.actionPrimary} onClick={handleAct}>
+            {message.actionLabel}
+          </button>
         </div>
       )}
     </DenarioBubble>
@@ -197,6 +242,8 @@ function MessageRenderer({ message, isFirst }: { message: Message; isFirst: bool
           {message.stageId && <StageResultCard stageId={message.stageId} />}
         </DenarioBubble>
       );
+    case 'suggestion-followup':
+      return <SuggestionFollowupBubble message={message} />;
     case 'system':
       return <p className={styles.systemMessage}>{message.content}</p>;
     default:
@@ -278,35 +325,105 @@ interface ConversationThreadProps {
   stageId: StageId;
 }
 
+const NEAR_BOTTOM_PX = 120;
+const PROGRAMMATIC_SCROLL_GUARD_MS = 700;
+
 export function ConversationThread({ stageId }: ConversationThreadProps) {
   const messages = usePipelineStore(s => s.pipeline?.messages ?? []);
+  const activeStageId = usePipelineStore(s => s.pipeline?.activeStageId);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const lastMessageElRef = useRef<HTMLDivElement | null>(null);
+  const followingRef = useRef(true);
+  const programmaticUntilRef = useRef(0);
+  const [showNewPill, setShowNewPill] = useState(false);
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
 
   // Input stage requires no track choice — auto-start it silently on mount.
   useEffect(() => {
     if (stageId !== 'input') return;
     const stage = usePipelineStore.getState().pipeline?.stages.input;
     if (stage?.status === 'idle') {
-      startStage('input', 'fast');
+      startStage('input', 'standard');
     }
   }, [stageId]);
 
+  // If a track was pre-selected on the homepage, stageRunner auto-advances
+  // straight into Idea generation once Input completes — follow it.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (stageId !== 'input' || !activeStageId || activeStageId === 'input' || !projectId) return;
+    navigate(`/project/${projectId}/stage/${activeStageId}`, { replace: true });
+  }, [stageId, activeStageId, projectId, navigate]);
+
+  function isNearBottom(): boolean {
+    const el = viewportRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX;
+  }
+
+  function handleViewportScroll() {
+    if (Date.now() < programmaticUntilRef.current) return; // ignore our own smooth-scroll animation
+    followingRef.current = isNearBottom();
+    if (followingRef.current) setShowNewPill(false);
+  }
+
+  function scrollToLatest(lastMsg: Message | undefined) {
+    programmaticUntilRef.current = Date.now() + PROGRAMMATIC_SCROLL_GUARD_MS;
+    if (lastMsg?.type === 'result-card' && lastMessageElRef.current) {
+      lastMessageElRef.current.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    } else {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    followingRef.current = true;
+    setShowNewPill(false);
+  }
+
+  const prevLenRef = useRef(messages.length);
+  useEffect(() => {
+    if (messages.length <= prevLenRef.current) {
+      prevLenRef.current = messages.length;
+      return;
+    }
+    prevLenRef.current = messages.length;
+
+    const last = messages[messages.length - 1];
+    if (last.role !== 'denario' || followingRef.current) {
+      scrollToLatest(last);
+    } else {
+      setShowNewPill(true);
+    }
   }, [messages.length]);
 
   return (
-    <>
-      <div className={styles.conversationViewport}>
+    <div className={styles.conversationThreadWrap}>
+      <div
+        className={styles.conversationViewport}
+        ref={viewportRef}
+        onScroll={handleViewportScroll}
+      >
         <div className={styles.conversationStack}>
           {messages.map((msg, idx) => (
-            <MessageRenderer key={msg.id} message={msg} isFirst={idx === 0} />
+            <div key={msg.id} ref={idx === messages.length - 1 ? lastMessageElRef : undefined}>
+              <MessageRenderer message={msg} isFirst={idx === 0} />
+            </div>
           ))}
           <div ref={bottomRef} />
+          <div className={styles.conversationSpacer} />
         </div>
       </div>
+
+      {showNewPill && (
+        <button
+          className={styles.newResponsePill}
+          onClick={() => scrollToLatest(messages[messages.length - 1])}
+        >
+          ↓ New response
+        </button>
+      )}
+
       <ComposeBar stageId={stageId} />
-    </>
+    </div>
   );
 }
 

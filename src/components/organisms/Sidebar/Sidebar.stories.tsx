@@ -34,10 +34,6 @@ const meta = {
       options: ['input', 'idea', 'methods', 'analysis', 'paper', 'literature', 'referee', 'keywords'],
       description: 'The stage that is currently open / active.',
     },
-    stagesComplete: {
-      control: { type: 'range', min: 0, max: 8, step: 1 },
-      description: 'Number of stages completed — drives the progress bar.',
-    },
     userEmail: {
       control: 'text',
       description: 'Authenticated user email shown in the user row.',
@@ -59,7 +55,6 @@ export const Home: Story = {
   args: {
     defaultMode: 'pipeline',
     activeStageId: 'input',
-    stagesComplete: 0,
     userEmail: 'researcher@lab.edu',
   },
 };
@@ -69,7 +64,6 @@ export const PipelineInProgress: Story = {
   args: {
     defaultMode: 'pipeline',
     activeStageId: 'analysis',
-    stagesComplete: 3,
     userEmail: 'researcher@lab.edu',
     projectName: 'co2-temp-study',
   },
@@ -80,7 +74,6 @@ export const ModularMode: Story = {
   args: {
     defaultMode: 'modular',
     activeStageId: 'literature',
-    stagesComplete: 5,
     userEmail: 'researcher@lab.edu',
     projectName: 'protein-folding-ml',
   },
@@ -91,7 +84,6 @@ export const AllComplete: Story = {
   args: {
     defaultMode: 'pipeline',
     activeStageId: 'keywords',
-    stagesComplete: 8,
     userEmail: 'j.guerrero@simonsfoundation.org',
     projectName: 'equity-returns-analysis',
   },

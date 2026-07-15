@@ -67,6 +67,10 @@ export const api = {
     return req(`/projects/${projectId}`);
   },
 
+  deleteProject(projectId: string): Promise<{ message: string }> {
+    return req(`/projects/${projectId}`, { method: 'DELETE' });
+  },
+
   setInput(projectId: string, dataDescription: string): Promise<BackendProject> {
     return req(`/projects/${projectId}/input`, {
       method: 'POST',

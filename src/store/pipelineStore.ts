@@ -3,13 +3,14 @@ import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, M
 import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
+import { parseBackendResult } from '../utils/parsers';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
   backendProjectId: string | null;   // UUID assigned by the FastAPI server
 
   // Pipeline lifecycle
-  createPipeline: (inputText: string, inputFile?: InputFile) => string; // returns new project id
+  createPipeline: (inputText: string, inputFile?: InputFile, track?: Track) => string; // returns new project id
   hydratePipeline: (backendProject: BackendProject) => string;           // load existing backend project; returns frontend id
   setPipeline: (pipeline: Pipeline) => void;
   clearPipeline: () => void;
@@ -23,16 +24,18 @@ interface PipelineStore {
   setStageParam: (stageId: StageId, key: string, value: string | number | boolean) => void;
   setStageResult: (stageId: StageId, result: StageResult) => void;
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
+  unlockNextStage: (stageId: StageId) => void;  // like approveStage, but adds no conversation messages
   setActiveStage: (stageId: StageId) => void;
 
   // Conversation
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string; // returns generated id
   updateMessage: (id: string, patch: Partial<Message>) => void;
+  removeMessage: (id: string) => void;
 }
 
 // ── Pipeline factory ──────────────────────────────────────────────────────────
 
-function buildPipeline(id: string, inputText: string, inputFile?: InputFile): Pipeline {
+function buildPipeline(id: string, inputText: string, inputFile?: InputFile, track?: Track): Pipeline {
   const now = Date.now();
   const stages = Object.fromEntries(
     STAGE_ORDER.map((sid, idx) => [
@@ -58,6 +61,7 @@ function buildPipeline(id: string, inputText: string, inputFile?: InputFile): Pi
     inputText,
     preferredTools: '',
     mode: 'pipeline',
+    initialTrack: track,
     activeStageId: 'input',
     stages,
     messages: [
@@ -100,37 +104,92 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   setBackendProjectId: (id) => set({ backendProjectId: id }),
 
-  createPipeline: (inputText, inputFile) => {
+  createPipeline: (inputText, inputFile, track) => {
     const id = `proj-${Date.now()}`;
-    const pipeline = buildPipeline(id, inputText, inputFile);
+    const pipeline = buildPipeline(id, inputText, inputFile, track);
     set({ pipeline });
     return id;
   },
 
   hydratePipeline: (backendProject) => {
     const id = `proj-${Date.now()}`;
-    // Map backend stage statuses onto a fresh pipeline
-    const pipeline = buildPipeline(id, '', undefined);
+    const inputText = backendProject.stages['input']?.content ?? '';
+    const pipeline = buildPipeline(id, inputText, undefined);
     const backendStatuses = backendProject.stages;
 
-    // Apply each backend status; keep frontend types in sync
     const statusMap: Record<string, StageStatus> = {
-      locked: 'locked', idle: 'idle', running: 'idle', // treat running as idle on resume
+      locked: 'locked', idle: 'idle', running: 'idle',
       complete: 'complete', error: 'error',
     };
 
+    // Map statuses and restore parsed results for completed stages
     const updatedStages = { ...pipeline.stages };
     for (const sid of STAGE_ORDER) {
       const bs = backendStatuses[sid];
-      if (bs) {
-        updatedStages[sid as StageId] = {
-          ...updatedStages[sid as StageId],
-          status: statusMap[bs.status] ?? 'locked',
-        };
+      if (!bs) continue;
+      const status = statusMap[bs.status] ?? 'locked';
+      let result: StageResult | undefined;
+      if (status === 'complete' && bs.content) {
+        const mockResult = MOCK_PIPELINE.stages[sid as StageId]?.result;
+        if (mockResult) {
+          result = parseBackendResult(sid as StageId, 'standard' as Track, bs.content, bs.duration_sec, mockResult);
+        }
+      }
+      updatedStages[sid as StageId] = {
+        ...updatedStages[sid as StageId],
+        status,
+        ...(result ? { result } : {}),
+      };
+    }
+
+    // Reconstruct conversation messages from unlocked stages
+    const now = backendProject.created_at ? backendProject.created_at * 1000 : Date.now();
+    const messages: Message[] = [
+      {
+        id: 'msg-1',
+        role: 'user',
+        type: 'text',
+        content: inputText,
+        stageId: 'input',
+        timestamp: now,
+      },
+    ];
+    for (const sid of STAGE_ORDER) {
+      if (sid === 'input') continue;
+      const stage = updatedStages[sid as StageId];
+      if (stage.status === 'locked') continue;
+      const prevSid = STAGE_ORDER[STAGE_ORDER.indexOf(sid) - 1];
+      messages.push({
+        id: `msg-sys-${sid}`,
+        role: 'denario',
+        type: 'system',
+        content: `Stage · ${STAGE_CONFIG[prevSid as StageId].label} complete — ${STAGE_CONFIG[sid as StageId].label} unlocked.`,
+        timestamp: now,
+      });
+      if (stage.status === 'complete') {
+        messages.push({
+          id: `msg-result-${sid}`,
+          role: 'denario',
+          type: 'result-card',
+          content: stage.result
+            ? `Generated in ${stage.result.durationLabel}. Review the output below.`
+            : 'Stage complete.',
+          stageId: sid as StageId,
+          track: stage.result?.track,
+          timestamp: now + 100,
+        });
+      } else {
+        messages.push({
+          id: `msg-prompt-${sid}`,
+          role: 'denario',
+          type: 'stage-prompt',
+          content: STAGE_CONFIG[sid as StageId].denarioOpener,
+          stageId: sid as StageId,
+          timestamp: now + 100,
+        });
       }
     }
 
-    // Determine the stage to land on: first idle/error, or last complete
     const activeStageId = (
       STAGE_ORDER.find(s => updatedStages[s as StageId].status === 'error') ??
       STAGE_ORDER.find(s => updatedStages[s as StageId].status === 'idle') ??
@@ -141,7 +200,9 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     const hydratedPipeline: Pipeline = {
       ...pipeline,
       name: backendProject.name,
+      inputText,
       stages: updatedStages,
+      messages,
       activeStageId,
     };
 
@@ -231,6 +292,18 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       return { pipeline: updated };
     }),
 
+  unlockNextStage: (stageId) =>
+    set(({ pipeline }) => {
+      if (!pipeline) return {};
+      let updated = updateStage(pipeline, stageId, { status: 'complete' });
+      const next = nextStage(stageId);
+      if (next && updated.stages[next].status === 'locked') {
+        updated = updateStage(updated, next, { status: 'idle' });
+        updated = { ...updated, activeStageId: next };
+      }
+      return { pipeline: updated };
+    }),
+
   setActiveStage: (stageId) =>
     set(({ pipeline }) =>
       pipeline ? { pipeline: { ...pipeline, activeStageId: stageId } } : {}
@@ -259,6 +332,17 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
         pipeline: {
           ...pipeline,
           messages: pipeline.messages.map(m => (m.id === id ? { ...m, ...patch } : m)),
+        },
+      };
+    }),
+
+  removeMessage: (id) =>
+    set(({ pipeline }) => {
+      if (!pipeline) return {};
+      return {
+        pipeline: {
+          ...pipeline,
+          messages: pipeline.messages.filter(m => m.id !== id),
         },
       };
     }),

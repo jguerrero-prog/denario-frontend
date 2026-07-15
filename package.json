@@ -20,6 +20,7 @@
   "devDependencies": {
     "@chromatic-com/storybook": "^5.2.1",
     "@fontsource-variable/instrument-sans": "^5.2.8",
+    "@fontsource-variable/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/literata": "^5.2.8",
     "@storybook/addon-a11y": "^10.4.6",

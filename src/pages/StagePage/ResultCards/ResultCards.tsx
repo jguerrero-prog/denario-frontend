@@ -9,6 +9,7 @@ import type {
   StageId,
   StageResult,
   IdeaResultData,
+  IdeaSuggestion,
   MethodsResultData,
   AnalysisResultData,
   PaperResultData,
@@ -68,14 +69,47 @@ const PencilIcon = () => (
   </svg>
 );
 
-function CardHeader({ file, source, timestamp }: { file: string; source: string; timestamp: string }) {
+const CopyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="5" width="7" height="7" rx="1" />
+    <path d="M9 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v5a1 1 0 0 0 1 1h2" />
+  </svg>
+);
+
+const CheckSmallIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.5 7l3 3 6-6" />
+  </svg>
+);
+
+const ThumbsUpIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 6.5h2v6H2z" />
+    <path d="M5.5 6.5l1.5-4a1.2 1.2 0 0 1 2.3.6L9 6h2.3a1 1 0 0 1 1 1.2l-.9 4.3a1 1 0 0 1-1 .8H5.5z" />
+  </svg>
+);
+
+const ThumbsDownIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2 7.5h2v-6H2z" />
+    <path d="M5.5 7.5l1.5 4a1.2 1.2 0 0 0 2.3-.6L9 8h2.3a1 1 0 0 0 1-1.2l-.9-4.3a1 1 0 0 0-1-.8H5.5z" />
+  </svg>
+);
+
+function CardHeader({ file, source, timestamp, badgeLabel }: { file: string; source: string; timestamp: string; badgeLabel?: string }) {
   return (
     <div className={styles.cardHeader}>
       <div className={styles.headerLeft}>
-        <span className={styles.statusDot} />
-        <div className={styles.fileChip}>
-          <span className={styles.fileChipText}>{file}</span>
-        </div>
+        {badgeLabel ? (
+          <span className={styles.headerBadgeLabel}>{badgeLabel}</span>
+        ) : (
+          <>
+            <span className={styles.statusDot} />
+            <div className={styles.fileChip}>
+              <span className={styles.fileChipText}>{file}</span>
+            </div>
+          </>
+        )}
         <div className={styles.headerSep} />
         <span className={styles.headerSource}>{source}</span>
       </div>
@@ -92,12 +126,12 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   return <p className={styles.sectionHeading}>{children}</p>;
 }
 
-function TagRow({ tags }: { tags?: string[] }) {
+function TagRow({ tags, tagClassName }: { tags?: string[]; tagClassName?: string }) {
   if (!tags || tags.length === 0) return null;
   return (
     <div className={styles.tagRow}>
       {tags.map((t) => (
-        <div key={t} className={styles.tagChip}>
+        <div key={t} className={`${styles.tagChip} ${tagClassName ?? ''}`}>
           <span className={styles.tagChipText}>{t}</span>
         </div>
       ))}
@@ -105,17 +139,30 @@ function TagRow({ tags }: { tags?: string[] }) {
   );
 }
 
-function ActionRow({ ghost, onGhost, primary, onPrimary }: {
+function ActionRow({ ghost, onGhost, primary, onPrimary, ghostClassName, primaryClassName }: {
   ghost: string;
   onGhost?: () => void;
   primary: string;
   onPrimary: () => void;
+  ghostClassName?: string;
+  primaryClassName?: string;
 }) {
   return (
     <div className={styles.actionRow}>
-      <button className={styles.ghostBtn} onClick={onGhost}>{ghost}</button>
-      <button className={styles.primaryBtn} onClick={onPrimary}>{primary}</button>
+      <button className={`${styles.ghostBtn} ${ghostClassName ?? ''}`} onClick={onGhost}>{ghost}</button>
+      <button className={`${styles.primaryBtn} ${primaryClassName ?? ''}`} onClick={onPrimary}>{primary}</button>
     </div>
+  );
+}
+
+function SuggestionChip({ suggestion, onTry }: { suggestion: IdeaSuggestion; onTry: (s: IdeaSuggestion) => void }) {
+  if (!suggestion.actionable) {
+    return <span className={styles.suggestionChipStatic}>{suggestion.label}</span>;
+  }
+  return (
+    <button className={styles.suggestionChip} onClick={() => onTry(suggestion)}>
+      {suggestion.label}
+    </button>
   );
 }
 
@@ -151,28 +198,45 @@ function IdeaResultCard({ result, onApprove, onOpenFull }: CardProps) {
   const [bodyDraft, setBodyDraft] = useState(
     ideaData?.hypothesis ?? result.content
   );
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const addMessage = usePipelineStore(s => s.addMessage);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(ideaData?.hypothesis ?? result.content).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  function handleTrySuggestion(suggestion: IdeaSuggestion) {
+    if (!suggestion.actionable || !suggestion.followUpMessage) return;
+    addMessage({
+      role: 'denario',
+      type: 'suggestion-followup',
+      content: suggestion.followUpMessage,
+      stageId: result.stageId,
+      actionLabel: suggestion.actionLabel,
+    });
+  }
 
   if (isEditing) {
     return (
-      <div className={styles.editForm}>
+      <div className={`${styles.editForm} ${styles.editFormIdea}`}>
         <div className={styles.editFormHeader}>
-          <div className={styles.editFormFile}>
-            <div className={styles.editDot} />
-            <span className={styles.editFileName}>{result.file}</span>
-          </div>
-          <span className={styles.editingLabel}>Editing</span>
+          <span className={styles.headerBadgeLabel}>Idea</span>
+          <span className={`${styles.editingLabel} ${styles.editingLabelIdea}`}>Editing</span>
         </div>
 
         <div className={styles.editFields}>
           <textarea
-            className={styles.editInput}
+            className={`${styles.editInput} ${styles.editInputIdea}`}
             rows={3}
             value={titleDraft}
             onChange={e => setTitleDraft(e.target.value)}
             autoFocus
           />
           <textarea
-            className={styles.editTextarea}
+            className={`${styles.editTextarea} ${styles.editTextareaIdea}`}
             value={bodyDraft}
             onChange={e => setBodyDraft(e.target.value)}
           />
@@ -185,10 +249,10 @@ function IdeaResultCard({ result, onApprove, onOpenFull }: CardProps) {
         <Divider />
 
         <div className={styles.editActions}>
-          <button className={styles.editCancelBtn} onClick={() => setIsEditing(false)}>
+          <button className={`${styles.editCancelBtn} ${styles.editCancelBtnIdea}`} onClick={() => setIsEditing(false)}>
             Cancel
           </button>
-          <button className={styles.editSaveBtn} onClick={() => { setIsEditing(false); onApprove(); }}>
+          <button className={`${styles.editSaveBtn} ${styles.editSaveBtnIdea}`} onClick={() => { setIsEditing(false); onApprove(); }}>
             Save & Approve →
           </button>
         </div>
@@ -197,21 +261,58 @@ function IdeaResultCard({ result, onApprove, onOpenFull }: CardProps) {
   }
 
   return (
-    <div className={styles.cardOuter}>
-      <div className={styles.editSlot}>
-        <button className={styles.editBtn} onClick={() => setIsEditing(true)} aria-label="Edit hypothesis">
-          <PencilIcon />
-        </button>
-      </div>
-      <div className={styles.editCardBody}>
-        <div className={styles.card}>
-          <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} />
-          <Divider />
-          <p className={styles.cardTitle}>{result.title}</p>
-          <p className={styles.cardProse}>{result.content}</p>
-          <TagRow tags={result.tags} />
-          <Divider />
-          <ActionRow ghost="Open full →" onGhost={onOpenFull} primary="Approve & Proceed →" onPrimary={onApprove} />
+    <div className={`${styles.card} ${styles.cardIdea}`}>
+      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} badgeLabel="Idea" />
+      <Divider />
+      <p className={`${styles.cardTitle} ${styles.cardTitleIdea}`}>{result.title}</p>
+      <p className={`${styles.cardProse} ${styles.cardProseIdea}`}>{result.content}</p>
+      <TagRow tags={result.tags} tagClassName={styles.tagChipIdea} />
+      {ideaData?.scopeNote && (
+        <div className={styles.ideaConstraint}>
+          <p className={styles.ideaConstraintTitle}>{ideaData.scopeNote.title}</p>
+          <p className={styles.ideaConstraintBody}>{ideaData.scopeNote.body}</p>
+          {ideaData.scopeNote.suggestions && ideaData.scopeNote.suggestions.length > 0 && (
+            <div className={styles.suggestionChipRow}>
+              {ideaData.scopeNote.suggestions.map(s => (
+                <SuggestionChip key={s.id} suggestion={s} onTry={handleTrySuggestion} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      <Divider />
+      <div className={styles.ideaBottomRow}>
+        <div className={styles.reactionRow}>
+          <button className={styles.reactionBtn} onClick={() => setIsEditing(true)} aria-label="Edit hypothesis" title="Edit">
+            <PencilIcon />
+          </button>
+          <button className={styles.reactionBtn} onClick={handleCopy} aria-label="Copy hypothesis" title="Copy">
+            {copied ? <CheckSmallIcon /> : <CopyIcon />}
+          </button>
+          <button
+            className={`${styles.reactionBtn} ${feedback === 'up' ? styles.reactionBtnActive : ''}`}
+            onClick={() => setFeedback(f => f === 'up' ? null : 'up')}
+            aria-label="Good hypothesis"
+            title="Good hypothesis"
+          >
+            <ThumbsUpIcon />
+          </button>
+          <button
+            className={`${styles.reactionBtn} ${feedback === 'down' ? styles.reactionBtnActive : ''}`}
+            onClick={() => setFeedback(f => f === 'down' ? null : 'down')}
+            aria-label="Needs work"
+            title="Needs work"
+          >
+            <ThumbsDownIcon />
+          </button>
+        </div>
+        <div className={styles.ideaActionsWrap}>
+          <ActionRow
+            ghost="Open full →" onGhost={onOpenFull}
+            primary="Approve & Proceed →" onPrimary={onApprove}
+            ghostClassName={styles.ghostBtnIdea}
+            primaryClassName={styles.primaryBtnIdea}
+          />
         </div>
       </div>
     </div>
@@ -630,7 +731,7 @@ const RefreshIcon = () => (
 function ErrorCard({ stageId }: { stageId: StageId }) {
   const stage = usePipelineStore(s => s.pipeline?.stages[stageId]);
   const error = stage?.error ?? 'An unexpected error occurred.';
-  const track  = stage?.track ?? 'fast';
+  const track  = stage?.track ?? 'standard';
 
   function handleRetry() {
     startStage(stageId, track);
@@ -665,7 +766,13 @@ export function StageResultCard({ stageId }: { stageId: StageId }) {
   function handleApprove() {
     approveStage(stageId);
     const next = nextStage(stageId);
-    if (next && projectId) navigate(`/project/${projectId}/stage/${next}`);
+    if (next && projectId) {
+      navigate(`/project/${projectId}/stage/${next}`);
+      // Stages that have no track choice start immediately on approval.
+      if (next === 'analysis') {
+        startStage(next, 'standard');
+      }
+    }
   }
 
   function handleOpenFull() {

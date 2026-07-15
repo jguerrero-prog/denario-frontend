@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { STAGE_CONFIG, STAGE_ORDER } from '../../config/stageConfig';
+import { MarkdownBlock } from '../../utils/MarkdownBlock';
 import type { MethodsResultData, StageId } from '../../types/pipeline';
 import styles from './MethodsFullPage.module.css';
 
@@ -152,7 +153,7 @@ export function MethodsFullPage() {
             {data?.overview && (
               <div className={styles.section}>
                 <p className={styles.sectionLabel}>Overview</p>
-                <p className={styles.prose}>{data.overview}</p>
+                <MarkdownBlock text={data.overview} className={styles.prose} />
               </div>
             )}
 
@@ -220,7 +221,7 @@ export function MethodsFullPage() {
                           </div>
                         </>
                       ) : (
-                        <p className={styles.stepCardBody}>{step.description}</p>
+                        <MarkdownBlock text={step.description} className={styles.stepCardBody} />
                       )}
 
                       {/* Code snippet */}

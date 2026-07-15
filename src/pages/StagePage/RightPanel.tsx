@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
+import { MarkdownBlock } from '../../utils/MarkdownBlock';
 import { STAGE_CONFIG } from '../../config/stageConfig';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { api } from '../../api/client';
@@ -25,50 +26,96 @@ const STAGE_ORDER: StageId[] = [
   'input', 'idea', 'methods', 'analysis', 'paper', 'literature', 'referee', 'keywords',
 ];
 
-const STAGE_SHORT: Record<StageId, string> = {
-  input:      'Input',
-  idea:       'Idea',
-  methods:    'Methods',
-  analysis:   'Analysis',
-  paper:      'Paper',
-  literature: 'Lit.',
-  referee:    'Referee',
-  keywords:   'Keywords',
-};
-
 const PANEL_MIN     = 300;
 const PANEL_DEFAULT = 340;
 const PANEL_WIDE    = 640;
 const PANEL_FULL    = 520; // threshold: show embedded full view for paper
 
-// ── Pill ──────────────────────────────────────────────────────────────────────
+// ── Dropdown icons ────────────────────────────────────────────────────────────
 
-function StagePill({
-  stageId,
-  status,
-  selected,
-  onClick,
-}: {
-  stageId: StageId;
-  status: StageStatus;
-  selected: boolean;
-  onClick: () => void;
-}) {
+function ChevronDownIcon() {
   return (
-    <button
-      className={[
-        styles.stagePill2,
-        selected              ? styles.stagePill2Selected : '',
-        status === 'complete' ? styles.stagePill2Done     : '',
-        status === 'locked'   ? styles.stagePill2Locked   : '',
-        status === 'error'    ? styles.stagePill2Error    : '',
-      ].join(' ')}
-      onClick={onClick}
-      disabled={status === 'locked'}
-      title={STAGE_CONFIG[stageId].label}
-    >
-      {STAGE_SHORT[stageId]}
-    </button>
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 6.5L4.5 9 10 3.5" />
+    </svg>
+  );
+}
+
+// ── Stage dropdown ────────────────────────────────────────────────────────────
+
+function StageDropdown({
+  statuses,
+  selected,
+  onChange,
+}: {
+  statuses: Record<StageId, StageStatus>;
+  selected: StageId;
+  onChange: (stageId: StageId) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutsideClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, [open]);
+
+  return (
+    <div className={styles.stageDropdown} ref={ref}>
+      <button
+        type="button"
+        className={styles.stageDropdownTrigger}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className={`${styles.stageDropdownChevron} ${open ? styles.stageDropdownChevronOpen : ''}`}>
+          <ChevronDownIcon />
+        </span>
+        <span className={styles.stageDropdownLabel}>{STAGE_CONFIG[selected].label}</span>
+      </button>
+
+      {open && (
+        <div className={styles.stageDropdownPanel}>
+          {STAGE_ORDER.map(sid => {
+            const status     = statuses[sid] ?? 'locked';
+            const isSelected = sid === selected;
+            const locked     = status === 'locked';
+            return (
+              <button
+                key={sid}
+                type="button"
+                className={[
+                  styles.stageDropdownRow,
+                  isSelected ? styles.stageDropdownRowSelected : '',
+                  locked     ? styles.stageDropdownRowLocked   : '',
+                ].join(' ')}
+                disabled={locked}
+                onClick={() => { onChange(sid); setOpen(false); }}
+              >
+                {isSelected && (
+                  <span className={styles.stageDropdownCheck}><CheckIcon /></span>
+                )}
+                <span className={styles.stageDropdownRowLabel}>{STAGE_CONFIG[sid].label}</span>
+                {status === 'error' && <span className={styles.stageDropdownRowError}>!</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -134,7 +181,7 @@ function MethodsReadingView({ result }: { result: StageResult }) {
               {tool && <span className={styles.readingToolChip}>{tool}</span>}
             </div>
             {description && (
-              <p className={styles.readingStepDesc}>{description}</p>
+              <MarkdownBlock text={description} className={styles.readingStepDesc} />
             )}
           </div>
         ))}
@@ -311,7 +358,7 @@ function InputReadingView() {
 
   return (
     <div className={styles.readingView}>
-      <p className={styles.readingSectionLabel}>Data description</p>
+      <p className={styles.readingTitle}>Data Description</p>
       <p className={styles.readingProse}>{inputText}</p>
       {preferredTools && (
         <>
@@ -450,64 +497,61 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
 
   const showFullView = selected === 'paper' && !!result && panelWidth >= PANEL_FULL;
 
+  const stageStatuses = Object.fromEntries(
+    STAGE_ORDER.map(sid => [sid, pipeline.stages[sid]?.status ?? 'locked'])
+  ) as Record<StageId, StageStatus>;
+
   return (
-    <aside
-      className={`${styles.rightPanel} ${dragging ? styles.rightPanelDragging : ''}`}
-      style={{ width: panelWidth }}
-    >
-      {/* Drag handle */}
-      <div
-        className={styles.resizeHandle}
-        onMouseDown={startResize}
-        onDoubleClick={handleResizeDblClick}
-        title="Drag to resize · Double-click to snap"
-      />
+    <div className={styles.rightPanelShell}>
+      <aside
+        className={`${styles.rightPanel} ${dragging ? styles.rightPanelDragging : ''}`}
+        style={{ width: panelWidth }}
+      >
+        {/* Drag handle */}
+        <div
+          className={styles.resizeHandle}
+          onMouseDown={startResize}
+          onDoubleClick={handleResizeDblClick}
+          title="Drag to resize · Double-click to snap"
+        />
 
-      {/* Stage pills */}
-      <div className={styles.pillRow}>
-        {STAGE_ORDER.map(sid => (
-          <StagePill
-            key={sid}
-            stageId={sid}
-            status={pipeline.stages[sid]?.status ?? 'locked'}
-            selected={sid === selected}
-            onClick={() => setSelected(sid)}
-          />
-        ))}
-      </div>
-
-      {/* Stage header — hidden when paper full view active */}
-      {!showFullView && (
-        <div className={styles.panelStageHeader}>
-          <div className={styles.panelStageHeaderLeft}>
-            <span className={styles.panelStageLabel}>{STAGE_CONFIG[selected].label}</span>
-            {file && <span className={styles.panelStageFile}>{file}</span>}
+        <div className={styles.cardBody}>
+          {/* Stage dropdown + download */}
+          <div className={styles.panelTopRow}>
+            <StageDropdown
+              statuses={stageStatuses}
+              selected={selected}
+              onChange={setSelected}
+            />
+            {!showFullView && backendId && file && (
+              <a
+                className={styles.panelDownloadBtn}
+                href={api.fileUrl(backendId, file)}
+                download={file}
+                title={`Download ${file}`}
+              >
+                <DownloadIcon />
+              </a>
+            )}
           </div>
-          {backendId && file && (
-            <a
-              className={styles.panelDownloadBtn}
-              href={api.fileUrl(backendId, file)}
-              download={file}
-              title={`Download ${file}`}
-            >
-              <DownloadIcon />
-            </a>
-          )}
-        </div>
-      )}
 
-      {/* Content */}
-      {showFullView ? (
-        <PaperPanelView data={paperData} title={paperTitle} />
-      ) : (
-        <div className={styles.panelContent}>
-          {result ? (
-            <PanelReadingView stageId={selected} />
+          {/* Content */}
+          {showFullView ? (
+            <PaperPanelView data={paperData} title={paperTitle} />
           ) : (
-            <EmptyState status={stage?.status ?? 'locked'} />
+            <>
+              <div className={styles.panelDividerLine} />
+              <div className={styles.panelContent}>
+                {result ? (
+                  <PanelReadingView stageId={selected} />
+                ) : (
+                  <EmptyState status={stage?.status ?? 'locked'} />
+                )}
+              </div>
+            </>
           )}
         </div>
-      )}
-    </aside>
+      </aside>
+    </div>
   );
 }

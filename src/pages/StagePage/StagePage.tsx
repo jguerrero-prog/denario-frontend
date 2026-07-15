@@ -3,7 +3,6 @@ import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { ConversationThread } from './ConversationThread';
 import { RightPanel } from './RightPanel';
 import { usePipelineStore } from '../../store/pipelineStore';
-import { STAGE_CONFIG } from '../../config/stageConfig';
 import type { StageId } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
@@ -33,8 +32,6 @@ export function StagePage() {
   }
 
   const sid = stageId as StageId;
-  const config = STAGE_CONFIG[sid];
-  const stage = pipeline.stages[sid];
 
   return (
     <div className={styles.layout}>
@@ -43,21 +40,10 @@ export function StagePage() {
       <main className={styles.main}>
         {/* Breadcrumb */}
         <div className={styles.breadcrumb}>
-          <div className={styles.breadcrumbLeft}>
-            <span className={styles.breadcrumbStage}>
-              Stage {Object.keys(STAGE_CONFIG).indexOf(sid) + 1}
-            </span>
-            <span className={styles.breadcrumbSep}>·</span>
-            <span className={styles.breadcrumbLabel}>{config.label}</span>
-          </div>
-          <div className={styles.breadcrumbRight}>
-            <span className={styles.stagePill} data-status={stage.status}>
-              {stage.status.charAt(0).toUpperCase() + stage.status.slice(1)}
-            </span>
-            <button className={styles.panelToggleBtn} aria-label="Toggle right panel">
-              <PanelRightIcon />
-            </button>
-          </div>
+          <span className={styles.breadcrumbProjectName}>{pipeline.name}</span>
+          <button className={styles.panelToggleBtn} aria-label="Toggle right panel">
+            <PanelRightIcon />
+          </button>
         </div>
 
         <ConversationThread stageId={sid} />

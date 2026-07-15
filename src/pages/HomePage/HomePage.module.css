@@ -6,7 +6,7 @@
   height: 100vh;
   overflow: hidden;
   background: var(--color-bg-app);
-  padding: 12px 0 12px 12px;
+  padding: 0;
   gap: 12px;
   box-sizing: border-box;
 }
@@ -117,23 +117,24 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--color-brand-light);
-  border: 1px solid #C4D9C4;
+  background: #FFFFFF;
+  border: 1px solid #EAEAEA;
   border-radius: 6px;
   padding: 6px 10px;
+  color: var(--color-text-pri);
 }
 
 .fileChipName {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--color-brand);
+  color: var(--color-text-pri);
   white-space: nowrap;
 }
 
 .fileChipDivider {
   width: 1px;
   height: 10px;
-  background: #C4D9C4;
+  background: #EAEAEA;
   flex-shrink: 0;
 }
 
@@ -302,9 +303,11 @@
 }
 
 .toolChipAdded {
-  background: var(--color-brand-light) !important;
-  border-color: var(--color-border-str) !important;
-  color: var(--color-brand) !important;
+  background: none !important;
+  border-width: 1.5px;
+  border-color: var(--color-text-pri) !important;
+  color: var(--color-text-pri) !important;
+  font-weight: 600;
 }
 
 .toolChipCheck {
@@ -323,7 +326,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-brand);
+  color: var(--color-text-pri);
 }
 
 .attachedInfoIcon {
@@ -335,7 +338,7 @@
 .attachedInfoText {
   font-family: var(--font-body);
   font-size: 11px;
-  color: var(--color-brand);
+  color: var(--color-text-pri);
   white-space: nowrap;
 }
 
@@ -397,10 +400,16 @@
   opacity: 1;
 }
 
+.beginGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .beginBtn {
-  background: var(--color-brand);
+  background: #000000;
   border: none;
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 8px 16px;
   font-family: var(--font-body);
   font-weight: 600;
@@ -411,12 +420,125 @@
 }
 
 .beginBtn:hover {
-  background: var(--color-brand-dark);
+  background: #2F2F2F;
 }
 
 .beginBtnAttached {
   font-size: 14px;
-  border-radius: 10px;
+  border-radius: 12px;
+}
+
+/* ── Track dropdown ── */
+
+.trackDropdown {
+  position: relative;
+}
+
+.trackDropdownTrigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.trackDropdownTrigger:hover {
+  background: #F4F4F4;
+}
+
+.trackDropdownLabel {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-pri);
+  white-space: nowrap;
+}
+
+.trackDropdownChevron {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-sec);
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.trackDropdownChevronOpen {
+  transform: rotate(180deg);
+}
+
+.trackDropdownPanel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 240px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border-def);
+  border-radius: 12px;
+  box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 200;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.trackDropdownRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.trackDropdownRow:hover {
+  background: #EBEBEB;
+}
+
+.trackDropdownRowSelected,
+.trackDropdownRowSelected:hover {
+  background: #EBEBEB;
+}
+
+.trackDropdownRowText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.trackDropdownRowLabel {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-pri);
+}
+
+.trackDropdownRowSub {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--color-text-mut);
+  line-height: 1.35;
+}
+
+.trackDropdownCheck {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-pri);
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 /* Word count */
@@ -529,4 +651,127 @@
 
 .continueLink:hover {
   color: var(--color-text-pri);
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-decorative);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.projectRow:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: #C0392B;
+  background: #FDF2F2;
+}
+
+/* ── Delete confirmation dialog ── */
+
+.dialogOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.dialog {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  padding: 24px;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dialogTitle {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--color-text-pri);
+  margin: 0;
+}
+
+.dialogBody {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text-sec);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dialogCheckLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-text-sec);
+  cursor: pointer;
+  padding-top: 4px;
+}
+
+.dialogCheckbox {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-brand);
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.dialogCancelBtn {
+  background: none;
+  border: 1px solid var(--color-border-def);
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-sec);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dialogCancelBtn:hover {
+  background: var(--color-bg-app);
+}
+
+.dialogDeleteBtn {
+  background: #C0392B;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dialogDeleteBtn:hover {
+  background: #A93226;
 }

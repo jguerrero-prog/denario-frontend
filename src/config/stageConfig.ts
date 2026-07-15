@@ -72,7 +72,7 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     paramFields: [],
     denarioOpener:
-      'Research scope captured. For a submission-quality study, Standard is the stronger choice — the adversarial loop stress-tests the hypothesis before you commit to it. Fast Track works for exploratory work. Which would you prefer?',
+      'Research scope captured. For a submission-quality study, Rigorous is the stronger choice — it stress-tests the hypothesis before you commit to it. Standard works for exploratory work. Which would you prefer?',
   },
 
   idea: {

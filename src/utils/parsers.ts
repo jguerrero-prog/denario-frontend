@@ -72,7 +72,7 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
   const hypothesis =
     extractSection(bodyContent, 'Hypothesis', 'Research Hypothesis', 'Research Question') ??
     firstParagraph(bodyContent) ??
-    mockData.hypothesis;
+    '';
 
   // Extract real sections — no mock fallback for domain-specific fields.
   // If the backend didn't emit a section, leave the field undefined so the UI hides it.
@@ -85,8 +85,10 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
     ...mockData,
     hypothesis,
     researchFraming: framing,
+    // suggestions: no backend support yet for tailored suggestions — reuse the
+    // mock's placeholder set so the chip UI/design can be iterated on now.
     scopeNote: scopeBody
-      ? { title: 'Scope constraint', body: scopeBody }
+      ? { title: 'Scope constraint', body: scopeBody, suggestions: mockData.scopeNote?.suggestions }
       : null,
     // loopLog — adversarial loop internals are not surfaced in idea.md; hide rather than mock
     loopLog: loopLines.length > 0 ? loopLines : [],
@@ -96,7 +98,7 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
   };
 
   return {
-    title: titleText ?? mock.title,
+    title: titleText ?? undefined,
     content: hypothesis,
     tags,
     stageData,
@@ -109,11 +111,11 @@ function parseMethods(content: string, mock: StageResult): Partial<StageResult> 
   const overview =
     extractSection(content, 'Overview', 'Summary') ??
     firstParagraph(content) ??
-    mockData.overview;
+    '';
 
-  // Match "## Step N: Label" or "## N. Label"
+  // Match "### N. Label" (backend default, 3 hashes) or "## Step N: Label" (legacy 2 hashes)
   const stepRe =
-    /##\s+(?:Step\s+)?(\d+)[.:]\s*(.+?)\s*\n([\s\S]*?)(?=\n##\s+(?:Step\s+)?\d+[.:]|\n##|\s*$)/gi;
+    /#{2,3}\s+(?:Step\s+)?(\d+)[.:]\s*(.+?)\s*\n([\s\S]*?)(?=\n#{2,3}\s+(?:Step\s+)?\d+[.:]|\n#{2,3}|\s*$)/gi;
   const steps: MethodsResultData['steps'] = [];
   let m: RegExpExecArray | null;
   while ((m = stepRe.exec(content)) !== null) {
@@ -132,6 +134,28 @@ function parseMethods(content: string, mock: StageResult): Partial<StageResult> 
     });
   }
 
+  // Fallback: bold Roman-numeral headers "**I. Title**" (e.g. CRISPR-style output)
+  if (steps.length === 0) {
+    const boldRe = /^\*\*([IVX]+)\.\s+([^*]+?)\*\*\s*\n([\s\S]*?)(?=^\*\*[IVX]+\.|\s*$)/gim;
+    let idx = 0;
+    while ((m = boldRe.exec(content)) !== null) {
+      idx++;
+      const body = m[3].trim();
+      const toolMatch = body.match(/\*\*Tools?\*\*:\s*(.+)/i);
+      const codeMatch = body.match(/```[a-z]*\n([\s\S]*?)```/);
+      steps.push({
+        n: String(idx).padStart(2, '0'),
+        label: m[2].trim(),
+        tool: toolMatch ? toolMatch[1].trim() : '',
+        description: body
+          .replace(/\*\*Tools?\*\*:.*\n?/gi, '')
+          .replace(/```[\s\S]*?```/g, '')
+          .trim(),
+        ...(codeMatch ? { codeSnippet: codeMatch[1].trim() } : {}),
+      });
+    }
+  }
+
   const stageData: MethodsResultData = {
     ...mockData,
     overview,
@@ -139,7 +163,7 @@ function parseMethods(content: string, mock: StageResult): Partial<StageResult> 
   };
 
   return {
-    title: extractTitle(content) ?? mock.title,
+    title: extractTitle(content) ?? undefined,
     content: overview,
     stageData,
   };
@@ -157,17 +181,17 @@ function parseAnalysis(content: string, mock: StageResult): Partial<StageResult>
   const narrative =
     extractSection(content, 'Findings', 'Narrative', 'Results', 'Summary') ??
     firstParagraph(content) ??
-    mockData.narrativeFindings;
+    null;
 
   const plots = [...new Set([...content.matchAll(/\b[\w.-]+\.png\b/gi)].map(x => x[0]))];
 
   const selfHealMatch = content.match(/(\d+)\s+self[- ]heal/i);
 
   const statsGrid: AnalysisResultData['statsGrid'] = {
-    pearsonR:    pearsonR    ?? mockData.statsGrid.pearsonR,
-    spearmanRho: spearmanRho ?? mockData.statsGrid.spearmanRho,
-    r2:          r2          ?? mockData.statsGrid.r2,
-    pValue:      pValue      ?? mockData.statsGrid.pValue,
+    pearsonR:    pearsonR    ?? '',
+    spearmanRho: spearmanRho ?? '',
+    r2:          r2          ?? '',
+    pValue:      pValue      ?? '',
   };
 
   const tags: string[] = [];
@@ -177,21 +201,21 @@ function parseAnalysis(content: string, mock: StageResult): Partial<StageResult>
 
   const stageData: AnalysisResultData = {
     ...mockData,
-    narrativeFindings: narrative,
-    plots: plots.length > 0 ? plots : mockData.plots,
-    totalPlots: plots.length > 0 ? plots.length : mockData.totalPlots,
-    selfHeals: selfHealMatch ? parseInt(selfHealMatch[1]) : mockData.selfHeals,
+    narrativeFindings: narrative ?? '',
+    plots: plots.length > 0 ? plots : [],
+    totalPlots: plots.length,
+    selfHeals: selfHealMatch ? parseInt(selfHealMatch[1]) : 0,
     statsGrid,
   };
 
   return {
-    title: extractTitle(content) ?? mock.title,
-    content: narrative,
-    tags: tags.length > 0 ? tags : mock.tags,
+    title: extractTitle(content) ?? undefined,
+    content: narrative ?? content.slice(0, 400),
+    tags,
     stats: {
-      ...(r2     ? { 'R²': r2 }                 : {}),
-      ...(pValue ? { 'p-value': pValue }         : {}),
-      ...(pearsonR ? { 'Pearson r': pearsonR }   : {}),
+      ...(r2        ? { 'R²': r2 }           : {}),
+      ...(pValue    ? { 'p-value': pValue }   : {}),
+      ...(pearsonR  ? { 'Pearson r': pearsonR } : {}),
     },
     stageData,
   };
@@ -224,13 +248,9 @@ function parsePaper(content: string, mock: StageResult): Partial<StageResult> {
   };
 
   return {
-    title: rawTitle ?? mock.title,
-    content: abstract ?? mock.content,
-    tags: [
-      'LaTeX',
-      `${citations} citations`,
-      ...(mock.tags?.filter(t => !t.includes('citation')) ?? []).slice(2),
-    ],
+    title: rawTitle ?? undefined,
+    content: abstract ?? undefined,
+    tags: ['LaTeX', `${citations} citations`],
     stageData,
   };
 }
@@ -262,9 +282,9 @@ function parseLiterature(content: string, mock: StageResult): Partial<StageResul
   };
 
   return {
-    title: extractTitle(content) ?? mock.title,
-    content: firstParagraph(content) ?? mock.content,
-    tags: [`${totalScanned} papers`, ...mock.tags!.slice(1)],
+    title: extractTitle(content) ?? undefined,
+    content: firstParagraph(content) ?? undefined,
+    tags: totalScanned > 0 ? [`${totalScanned} papers`] : [],
     stageData,
   };
 }
@@ -307,7 +327,7 @@ function parseReferee(content: string, mock: StageResult): Partial<StageResult> 
   };
 
   return {
-    title: extractTitle(content) ?? mock.title,
+    title: extractTitle(content) ?? undefined,
     content: verdictText,
     stageData,
   };
@@ -333,8 +353,8 @@ function parseKeywords(content: string, mock: StageResult): Partial<StageResult>
   };
 
   return {
-    title: extractTitle(content) ?? mock.title,
-    content: mock.content,
+    title: extractTitle(content) ?? undefined,
+    content: undefined,
     stageData,
   };
 }
@@ -359,7 +379,7 @@ export function parseBackendResult(
 ): StageResult {
   const durationLabel = fmtDuration(durationSec) ?? mock.durationLabel;
 
-  if (!rawContent) return { ...mock, durationLabel, generatedAt: Date.now() };
+  if (!rawContent) return { ...mock, title: undefined, content: '', tags: [], stats: {}, durationLabel, generatedAt: Date.now() };
 
   let parsed: Partial<StageResult> = {};
   try {

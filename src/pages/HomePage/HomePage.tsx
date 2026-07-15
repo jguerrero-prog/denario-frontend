@@ -4,13 +4,14 @@ import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { api } from '../../api/client';
 import type { BackendProject } from '../../api/client';
+import type { Track } from '../../types/pipeline';
 import styles from './HomePage.module.css';
 
 // ── Icons ────────────────────────────────────────────────────────────────────
 
 function FileTextSmallIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#2D6A2D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
     </svg>
@@ -33,6 +34,17 @@ function PaperclipIcon() {
   );
 }
 
+function TrashIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  );
+}
+
 function FolderIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -47,6 +59,82 @@ function PanelRightIcon() {
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M15 3v18" />
     </svg>
+  );
+}
+
+function ChevronDownSmallIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  );
+}
+
+function CheckSmallIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 6.5L4.5 9 10 3.5" />
+    </svg>
+  );
+}
+
+// ── Track dropdown ────────────────────────────────────────────────────────────
+
+const TRACK_OPTIONS: { value: Track; label: string; subheadline: string }[] = [
+  { value: 'standard', label: 'Standard', subheadline: 'Faster, with less token usage' },
+  { value: 'rigorous', label: 'Rigorous', subheadline: 'A thorough review that stress-tests your idea' },
+];
+
+function TrackDropdown({ value, onChange }: { value: Track; onChange: (track: Track) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onOutsideClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', onOutsideClick);
+    return () => document.removeEventListener('mousedown', onOutsideClick);
+  }, [open]);
+
+  const selected = TRACK_OPTIONS.find(o => o.value === value) ?? TRACK_OPTIONS[0];
+
+  return (
+    <div className={styles.trackDropdown} ref={ref}>
+      <button
+        type="button"
+        className={styles.trackDropdownTrigger}
+        onClick={() => setOpen(o => !o)}
+      >
+        <span className={styles.trackDropdownLabel}>{selected.label}</span>
+        <span className={`${styles.trackDropdownChevron} ${open ? styles.trackDropdownChevronOpen : ''}`}>
+          <ChevronDownSmallIcon />
+        </span>
+      </button>
+
+      {open && (
+        <div className={styles.trackDropdownPanel}>
+          {TRACK_OPTIONS.map(opt => {
+            const isSelected = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                className={`${styles.trackDropdownRow} ${isSelected ? styles.trackDropdownRowSelected : ''}`}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+              >
+                <div className={styles.trackDropdownRowText}>
+                  <span className={styles.trackDropdownRowLabel}>{opt.label}</span>
+                  <span className={styles.trackDropdownRowSub}>{opt.subheadline}</span>
+                </div>
+                {isSelected && <span className={styles.trackDropdownCheck}><CheckSmallIcon /></span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -115,9 +203,14 @@ export function HomePage() {
 
   const [text, setText]             = useState('');
   const [file, setFile]             = useState<{ name: string; size: string } | null>(null);
+  const [track, setTrack]           = useState<Track>('standard');
   const [isCreating, setIsCreating] = useState(false);
   const [activeTab, setActiveTab]   = useState<string>('data');
   const [recentProjects, setRecentProjects] = useState<BackendProject[]>([]);
+  const [pendingDelete, setPendingDelete]   = useState<BackendProject | null>(null);
+  const [skipConfirm, setSkipConfirm]       = useState(
+    () => localStorage.getItem('denario-skip-delete-confirm') === 'true'
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -158,6 +251,38 @@ export function HomePage() {
     e.target.value = '';
   }
 
+  function handleDeleteClick(project: BackendProject, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (skipConfirm) {
+      void executeDelete(project);
+    } else {
+      setPendingDelete(project);
+    }
+  }
+
+  async function executeDelete(project: BackendProject) {
+    try {
+      await api.deleteProject(project.id);
+      setRecentProjects(prev => prev.filter(p => p.id !== project.id));
+    } catch {
+      // silently ignore — server may be down
+    } finally {
+      setPendingDelete(null);
+    }
+  }
+
+  function handleConfirmDelete(dontAsk: boolean) {
+    if (dontAsk) {
+      localStorage.setItem('denario-skip-delete-confirm', 'true');
+      setSkipConfirm(true);
+    }
+    if (pendingDelete) void executeDelete(pendingDelete);
+  }
+
+  function handleCancelDelete() {
+    setPendingDelete(null);
+  }
+
   function handleContinue(project: BackendProject) {
     const frontendId = hydratePipeline(project);
     // Find the stage to land on: first idle/error, or last complete
@@ -173,7 +298,7 @@ export function HomePage() {
     if (!hasText || isCreating) return;
     setIsCreating(true);
 
-    const frontendId = createPipeline(text, file ?? undefined);
+    const frontendId = createPipeline(text, file ?? undefined, track);
 
     // Create the backend project so stageRunner has an ID ready on first Generate.
     // If the server is down this is a no-op — stageRunner will retry lazily.
@@ -296,14 +421,17 @@ export function HomePage() {
                   </div>
                 )}
 
-                <button
-                  className={`${styles.beginBtn} ${isAttached ? styles.beginBtnAttached : ''}`}
-                  onClick={handleBegin}
-                  disabled={!hasText || isCreating}
-                  style={{ opacity: hasText && !isCreating ? 1 : 0.45, cursor: hasText && !isCreating ? 'pointer' : 'default' }}
-                >
-                  {isCreating ? 'Starting…' : 'Begin →'}
-                </button>
+                <div className={styles.beginGroup}>
+                  <TrackDropdown value={track} onChange={setTrack} />
+                  <button
+                    className={`${styles.beginBtn} ${isAttached ? styles.beginBtnAttached : ''}`}
+                    onClick={handleBegin}
+                    disabled={!hasText || isCreating}
+                    style={{ opacity: hasText && !isCreating ? 1 : 0.45, cursor: hasText && !isCreating ? 'pointer' : 'default' }}
+                  >
+                    {isCreating ? 'Starting…' : 'Begin →'}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -343,6 +471,13 @@ export function HomePage() {
                         >
                           Open
                         </button>
+                        <button
+                          className={styles.deleteBtn}
+                          aria-label="Delete project"
+                          onClick={e => handleDeleteClick(project, e)}
+                        >
+                          <TrashIcon />
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -353,6 +488,52 @@ export function HomePage() {
           </div>
         </div>
       </main>
+
+      {pendingDelete && (
+        <DeleteConfirmDialog
+          projectName={pendingDelete.name}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Delete confirmation dialog ─────────────────────────────────────────────────
+
+function DeleteConfirmDialog({
+  projectName,
+  onConfirm,
+  onCancel,
+}: {
+  projectName: string;
+  onConfirm: (dontAsk: boolean) => void;
+  onCancel: () => void;
+}) {
+  const [dontAsk, setDontAsk] = useState(false);
+
+  return (
+    <div className={styles.dialogOverlay} onClick={onCancel}>
+      <div className={styles.dialog} onClick={e => e.stopPropagation()}>
+        <p className={styles.dialogTitle}>Delete this project?</p>
+        <p className={styles.dialogBody}>
+          <strong>{projectName}</strong> and all its files will be permanently removed. This can't be undone.
+        </p>
+        <label className={styles.dialogCheckLabel}>
+          <input
+            type="checkbox"
+            checked={dontAsk}
+            onChange={e => setDontAsk(e.target.checked)}
+            className={styles.dialogCheckbox}
+          />
+          Don't ask me again
+        </label>
+        <div className={styles.dialogActions}>
+          <button className={styles.dialogCancelBtn} onClick={onCancel}>Cancel</button>
+          <button className={styles.dialogDeleteBtn} onClick={() => onConfirm(dontAsk)}>Delete</button>
+        </div>
+      </div>
     </div>
   );
 }

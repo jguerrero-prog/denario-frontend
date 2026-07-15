@@ -31,14 +31,14 @@ export const MOCK_PIPELINE: Pipeline = {
       {
         id,
         status: idx === 0 ? 'complete' : idx === 1 ? 'idle' : 'locked',
-        track: idx === 0 ? 'fast' : undefined,
+        track: idx === 0 ? 'standard' : undefined,
         models: defaultModels(id),
         params: defaultParams(id),
         result:
           idx === 0
             ? {
                 stageId: 'input',
-                track: 'fast',
+                track: 'standard',
                 file: 'idea.md',
                 title:
                   'Temporal Correlation Between Atmospheric CO₂ Concentration and Surface Temperature Anomalies (2019–2024)',
@@ -75,7 +75,7 @@ export const MOCK_PIPELINE: Pipeline = {
       id: 'm3',
       role: 'user',
       type: 'text',
-      content: 'Fast Track — Quick pass',
+      content: 'Standard',
       stageId: 'input',
       timestamp: Date.now() - 170_000,
     },
@@ -85,7 +85,7 @@ export const MOCK_PIPELINE: Pipeline = {
       type: 'result-card',
       content: 'Generated in 1 min 12 sec. Review the hypothesis below — edit it here before approving, or approve to unlock the Methods stage.',
       stageId: 'input',
-      track: 'fast',
+      track: 'standard',
       timestamp: Date.now() - 72_000,
     },
     {

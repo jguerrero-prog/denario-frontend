@@ -9,7 +9,7 @@ export type StageId =
   | 'keywords';
 
 export type StageStatus = 'locked' | 'idle' | 'running' | 'complete' | 'error';
-export type Track = 'standard' | 'fast';
+export type Track = 'standard' | 'rigorous';
 
 // ── Model configuration ────────────────────────────────────────────────────────
 
@@ -25,11 +25,12 @@ export interface ModelConfig {
 export type MessageRole = 'user' | 'denario';
 
 export type MessageType =
-  | 'text'          // plain chat bubble
-  | 'stage-prompt'  // Denario opens a stage with action choices
-  | 'status'        // ephemeral cycling status (running state)
-  | 'result-card'   // stage output (idea.md, method.md, etc.)
-  | 'system';       // pipeline events ("Moving to Stage 2…")
+  | 'text'                 // plain chat bubble
+  | 'stage-prompt'         // Denario opens a stage with action choices
+  | 'status'               // ephemeral cycling status (running state)
+  | 'result-card'          // stage output (idea.md, method.md, etc.)
+  | 'suggestion-followup'  // Denario elaborates on a clicked scope-constraint suggestion
+  | 'system';              // pipeline events ("Moving to Stage 2…")
 
 export interface Message {
   id: string;
@@ -38,15 +39,24 @@ export interface Message {
   content: string;
   stageId?: StageId;    // which stage this message belongs to
   track?: Track;        // set on result-card messages
+  actionLabel?: string; // action button label — used by 'suggestion-followup'
   timestamp: number;
 }
 
 // ── Stage result data (per-stage structured payload) ──────────────────────────
 
+export interface IdeaSuggestion {
+  id: string;
+  label: string;
+  actionable: boolean;      // false = requires the user to bring new data/evidence
+  followUpMessage?: string; // Denario's elaboration, shown as a new turn (actionable only)
+  actionLabel?: string;     // action button label on that follow-up turn (actionable only)
+}
+
 export interface IdeaResultData {
   kind: 'idea';
   hypothesis: string;
-  scopeNote?: { title: string; body: string } | null;
+  scopeNote?: { title: string; body: string; suggestions?: IdeaSuggestion[] } | null;
   researchFraming?: string;
   methodologyTags: string[];
   loopLog: string[];
@@ -160,6 +170,7 @@ export interface Pipeline {
   inputText: string;
   preferredTools: string;
   mode: 'pipeline' | 'modular';
+  initialTrack?: Track;  // track chosen on the homepage before the pipeline was created
   stages: Record<StageId, Stage>;
   activeStageId: StageId;
   messages: Message[];

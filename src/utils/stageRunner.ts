@@ -25,13 +25,13 @@ const sseCleanups   = new Map<StageId, () => void>();
 // ── Mock results ──────────────────────────────────────────────────────────────
 
 function buildMockResult(stageId: StageId, track: Track): StageResult {
-  const fast = track === 'fast';
+  const standard = track === 'standard';
   const results: Record<StageId, StageResult> = {
     input: {
       stageId, track, file: 'workspace',
       title: 'Research Scope Configured',
       content: 'Dataset and research question validated. Tools and preferred libraries recorded.',
-      durationLabel: fast ? '11 sec' : '24 sec',
+      durationLabel: standard ? '11 sec' : '24 sec',
       generatedAt: Date.now(),
     },
     idea: {
@@ -39,7 +39,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       title: 'Temporal Correlation Between Atmospheric CO₂ Concentration and Surface Temperature Anomalies: A 5-Year Constrained Observational Study (2019–2024)',
       content: 'This study tests whether a statistically significant positive correlation exists between rising atmospheric CO₂ concentrations and concurrent surface temperature anomalies using Pearson and Spearman correlation coefficients alongside OLS regression (statsmodels).',
       tags: ['Time-series regression', 'OLS · Pearson · Spearman'],
-      durationLabel: fast ? '1 min 08 sec' : '2 min 41 sec',
+      durationLabel: standard ? '1 min 08 sec' : '2 min 41 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'idea',
@@ -47,6 +47,27 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
         scopeNote: {
           title: 'Scope constraint flagged by adversarial review',
           body: 'The 5-year observation window (2019–2024) is acknowledged as a scope limitation. Findings should be framed as period-specific correlations rather than multi-decadal climate trends. This constraint was identified by the idea_hater agent during the adversarial loop and incorporated into the hypothesis framing before finalisation.',
+          suggestions: [
+            {
+              id: 'reframe-period-specific',
+              label: 'Reframe hypothesis as period-specific rather than multi-decadal',
+              actionable: true,
+              followUpMessage: 'I can tighten the hypothesis language so it explicitly claims a period-specific correlation (2019–2024) rather than implying a multi-decadal climate trend. This is a wording change to idea.md — no new data needed.',
+              actionLabel: 'Reframe hypothesis →',
+            },
+            {
+              id: 'sensitivity-subwindows',
+              label: 'Add a sensitivity check across sub-windows within 2019–2024',
+              actionable: true,
+              followUpMessage: 'I can re-run the correlation test on rolling sub-windows (e.g. 2019–2021 vs 2022–2024) using the data you already have, to show the relationship holds across the period rather than being driven by one segment.',
+              actionLabel: 'Run sensitivity check →',
+            },
+            {
+              id: 'need-multidecadal-data',
+              label: 'Would need multi-decadal station data to test long-term trends',
+              actionable: false,
+            },
+          ],
         },
         researchFraming: 'The study targets the climate science domain, focusing on empirical validation within the Python scientific stack (pandas, statsmodels) to maintain full reproducibility. The 2019–2024 observation window captures a post-pandemic emissions recovery period of particular scientific interest, and the period-specific framing aligns with the dataset boundaries available.',
         methodologyTags: ['Time-series correlation analysis', 'OLS · Pearson · Spearman · Scope-constrained'],
@@ -55,12 +76,12 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
           '> Iteration 1: idea_hater flagged narrow observation window as limitation',
           '> Iteration 2: idea_maker refined — added scope-constrained framing',
           '> Iteration 2: idea_hater accepted with note on multi-decadal caution',
-          fast ? '> Iteration 3: planner finalised research question' : '> Iteration 3: idea_maker strengthened statistical methodology rationale',
-          fast ? '> Hypothesis locked · idea.md committed' : '> Iteration 4: formatter standardised output structure',
-          fast ? null : '> Hypothesis locked · idea.md committed',
+          standard ? '> Iteration 3: planner finalised research question' : '> Iteration 3: idea_maker strengthened statistical methodology rationale',
+          standard ? '> Hypothesis locked · idea.md committed' : '> Iteration 4: formatter standardised output structure',
+          standard ? null : '> Hypothesis locked · idea.md committed',
         ].filter(Boolean) as string[],
         stageOutput: 'idea.md saved · Stage 3 (Methods) unlocked',
-        meta: { track: fast ? 'Fast Track' : 'Standard', iterations: fast ? 3 : 4, duration: fast ? '1m 08s' : '6m 42s' },
+        meta: { track: standard ? 'Standard' : 'Rigorous', iterations: standard ? 3 : 4, duration: standard ? '1m 08s' : '6m 42s' },
       } satisfies IdeaResultData,
     },
     methods: {
@@ -68,7 +89,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       title: 'Technical Methodology: CO₂-Temperature Correlation Analysis',
       content: 'Five-step pipeline: ingest and validate CSVs, resample and align series, generate time-series plots, run Pearson/Spearman/OLS correlation tests, then export results and coefficients to results.md.',
       tags: ['pandas · statsmodels', '5 steps · est. 2 min runtime'],
-      durationLabel: fast ? '58 sec' : '2 min 12 sec',
+      durationLabel: standard ? '58 sec' : '2 min 12 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'methods',
@@ -115,7 +136,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       content: 'Pearson r = 0.847 (p < 0.001) · Spearman ρ = 0.831. OLS R² = 0.718, confirming CO₂ as a statistically significant predictor of temperature anomaly (β = 0.0043°C/ppm, p < 0.001). Minor heteroscedasticity observed at the upper tail — noted in results.md.',
       tags: ['R² 0.718', 'p < 0.001', '2 self-heals', '9 plots'],
       stats: { 'R²': '0.718', 'p-value': '< 0.001', 'Pearson r': '0.847' },
-      durationLabel: fast ? '1 min 42 sec' : '7 min 04 sec',
+      durationLabel: standard ? '1 min 42 sec' : '7 min 04 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'analysis',
@@ -151,14 +172,14 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       title: 'Temporal Correlation Between Atmospheric CO₂ Concentration and Surface Temperature Anomalies (2019–2024)',
       content: 'Full LaTeX manuscript generated with abstract, introduction, methods, results, and discussion. 14 citations inserted. Figures embedded.',
       tags: ['LaTeX', '14 citations', '3 figures'],
-      durationLabel: fast ? '4 min 11 sec' : '9 min 38 sec',
+      durationLabel: standard ? '4 min 11 sec' : '9 min 38 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'paper',
         texFile: { name: 'manuscript.tex', size: '14.2 KB' },
         pdfFile: { name: 'paper.pdf', size: '1.4 MB', pages: 8 },
         citations: 14,
-        journal: fast ? 'Standard' : 'NeurIPS',
+        journal: standard ? 'Standard' : 'NeurIPS',
         abstract: 'This study investigates the temporal correlation between atmospheric CO₂ concentration and surface temperature anomalies over a five-year observation period (2019–2024) across 23 monitoring stations…',
       } satisfies PaperResultData,
     },
@@ -167,7 +188,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       title: 'Literature Review Complete',
       content: '23 related papers identified via Semantic Scholar. 4 directly overlapping studies noted. No prior work uses the same 23-station dataset over this exact window.',
       tags: ['23 papers', '4 overlaps'],
-      durationLabel: fast ? '1 min 44 sec' : '3 min 29 sec',
+      durationLabel: standard ? '1 min 44 sec' : '3 min 29 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'literature',
@@ -190,7 +211,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       title: 'Referee Report Simulated',
       content: 'Reviewer A (minor revision): spatial autocorrelation section needs elaboration. Reviewer B (accept with minor revisions): methodology is sound, discussion is thorough.',
       tags: ['Minor revision', '2 reviewers'],
-      durationLabel: fast ? '2 min 03 sec' : '4 min 17 sec',
+      durationLabel: standard ? '2 min 03 sec' : '4 min 17 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'referee',
@@ -206,7 +227,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       title: 'Keywords Extracted',
       content: 'Primary: CO₂ concentration, temperature anomaly, climate correlation. Methodology: OLS regression, Pearson correlation, time-series analysis. Domain: atmospheric science, climate modelling.',
       tags: ['6 primary', '3 methodology', '2 domain'],
-      durationLabel: fast ? '18 sec' : '41 sec',
+      durationLabel: standard ? '18 sec' : '41 sec',
       generatedAt: Date.now(),
       stageData: {
         kind: 'keywords',
@@ -256,7 +277,7 @@ export async function startStage(stageId: StageId, track: Track) {
     }
 
     // ── 3. Start the stage on the backend ───────────────────────────────────
-    const backendTrack = track === 'fast' ? 'fast' : 'cmbagent';
+    const backendTrack = track === 'standard' ? 'fast' : 'cmbagent';
     const apiKeys = useConfigStore.getState().getApiKeyPayload();
     await api.runStage(backendId, stageId, { track: backendTrack, ...apiKeys });
 
@@ -306,6 +327,27 @@ export async function stopStage(stageId: StageId) {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+function stageCompleteMessage(stageId: StageId, durationLabel: string): string {
+  switch (stageId) {
+    case 'input':
+      return 'Your research description has been saved. Ready to generate your hypothesis.';
+    case 'idea':
+      return `Hypothesis generated in ${durationLabel}. Review and edit if needed, then approve to continue.`;
+    case 'methods':
+      return `Methods plan generated in ${durationLabel}. Review each step and edit if needed, then approve to continue.`;
+    case 'analysis':
+      return `Analysis complete in ${durationLabel}. Review the findings below, then approve to continue.`;
+    case 'paper':
+      return `Paper draft generated in ${durationLabel}. Review and download the LaTeX file, then approve to continue.`;
+    case 'literature':
+      return `Literature review complete in ${durationLabel}. Review the findings below.`;
+    case 'referee':
+      return `Referee report generated in ${durationLabel}. Review the comments below.`;
+    case 'keywords':
+      return `Keywords extracted in ${durationLabel}. Review the groups below.`;
+  }
+}
+
 function _onStageComplete(
   stageId:     StageId,
   track:       Track,
@@ -313,20 +355,34 @@ function _onStageComplete(
   msgId:       string,
   rawContent?: string | null,
 ) {
-  const { setStageResult, setStageStatus, updateMessage } = usePipelineStore.getState();
+  const { setStageResult, setStageStatus, updateMessage, removeMessage } = usePipelineStore.getState();
 
   const mock   = buildMockResult(stageId, track);
   const result = parseBackendResult(stageId, track, rawContent ?? null, durationSec, mock);
   const { durationLabel } = result;
 
   setStageResult(stageId, result);
-  updateMessage(msgId, {
-    type:    'result-card',
-    content: `Generated in ${durationLabel}. Review the output below — edit before approving, or approve to proceed.`,
-  });
   setStageStatus(stageId, 'complete');
   statusMsgIds.delete(stageId);
   sseCleanups.delete(stageId);
+
+  // Track was already chosen on the homepage — skip the manual hand-off
+  // (Generate Hypothesis button + track prompt) and go straight into
+  // hypothesis generation, with no intermediate confirmation message.
+  const initialTrack = usePipelineStore.getState().pipeline?.initialTrack;
+  if (stageId === 'input' && initialTrack) {
+    removeMessage(msgId);
+    const { unlockNextStage, setStageTrack } = usePipelineStore.getState();
+    unlockNextStage('input');
+    setStageTrack('idea', initialTrack);
+    startStage('idea', initialTrack);
+    return;
+  }
+
+  updateMessage(msgId, {
+    type:    'result-card',
+    content: stageCompleteMessage(stageId, durationLabel),
+  });
 }
 
 function _onStageError(stageId: StageId, msgId: string, error: string) {
@@ -342,7 +398,7 @@ function _onStageError(stageId: StageId, msgId: string, error: string) {
 }
 
 function _runMock(stageId: StageId, track: Track, msgId: string) {
-  const duration = track === 'fast' ? 4_000 : 8_000;
+  const duration = track === 'standard' ? 4_000 : 8_000;
   const timer = setTimeout(() => {
     _onStageComplete(stageId, track, duration / 1000, msgId);
     activeTimers.delete(stageId);

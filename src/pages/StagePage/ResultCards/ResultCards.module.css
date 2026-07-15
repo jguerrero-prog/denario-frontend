@@ -163,6 +163,15 @@
   white-space: nowrap;
 }
 
+.headerBadgeLabel {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-pri);
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
 .headerSep {
   width: 1px;
   height: 14px;
@@ -916,6 +925,157 @@
   min-width: 0;
 }
 
+/* ── Idea card view-mode overrides ── */
+
+.cardIdea {
+  background: none;
+  border: none;
+}
+
+.cardTitleIdea {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.cardProseIdea {
+  color: var(--color-text-pri);
+}
+
+.tagChipIdea {
+  background: #FFFFFF;
+  border: 1.5px solid #F4F4F4;
+  border-radius: 12px;
+}
+
+.tagChipIdea .tagChipText {
+  color: var(--color-text-pri);
+}
+
+/* ── Idea scope constraint + suggestions ── */
+
+.ideaConstraint {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ideaConstraintTitle {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  line-height: 1.4;
+}
+
+.ideaConstraintBody {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  line-height: 1.6;
+}
+
+.suggestionChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+.suggestionChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: #FFFFFF;
+  border: 1.5px solid #F4F4F4;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-pri);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.suggestionChip:hover {
+  background: #F4F4F4;
+}
+
+.suggestionChipStatic {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: none;
+  border: 1.5px dashed #F4F4F4;
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-mut);
+  white-space: nowrap;
+}
+
+.ghostBtnIdea,
+.primaryBtnIdea {
+  border-radius: 12px;
+}
+
+.primaryBtnIdea {
+  background: #000000;
+}
+
+.primaryBtnIdea:hover {
+  background: #2F2F2F;
+}
+
+.ideaBottomRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.reactionRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.reactionBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--color-text-mut);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.reactionBtn:hover {
+  background: #F4F4F4;
+  color: var(--color-text-pri);
+}
+
+.reactionBtnActive {
+  background: #F4F4F4;
+  color: var(--color-text-pri);
+}
+
+.ideaActionsWrap {
+  flex-shrink: 0;
+}
+
+.ideaActionsWrap .actionRow {
+  width: auto;
+}
+
 /* Edit form (replaces card when editing) */
 
 .editForm {
@@ -1070,6 +1230,45 @@
 
 .editSaveBtn:hover {
   background: var(--color-brand-dark);
+}
+
+/* ── Idea card edit-mode overrides ── */
+
+.editFormIdea {
+  background: none;
+  border: none;
+}
+
+.editingLabelIdea {
+  color: var(--color-text-mut);
+}
+
+.editInputIdea {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.editInputIdea:focus,
+.editTextareaIdea:focus {
+  border-color: #000000;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.editCancelBtnIdea {
+  border-radius: 12px;
+}
+
+.editCancelBtnIdea:hover {
+  background: #F4F4F4;
+}
+
+.editSaveBtnIdea {
+  border-radius: 12px;
+  background: #000000;
+}
+
+.editSaveBtnIdea:hover {
+  background: #2F2F2F;
 }
 
 /* ── Methods edit mode ── */
