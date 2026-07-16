@@ -45,7 +45,7 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
         kind: 'idea',
         hypothesis: 'This study investigates whether rising atmospheric CO₂ concentrations (ppm) serve as a statistically significant predictor of concurrent surface temperature anomalies (°C) across a constrained 5-year observation window (2019–2024). The null hypothesis posits no significant relationship between CO₂ concentration and temperature anomaly. The alternative hypothesis posits that CO₂ concentration is a statistically significant predictor of surface temperature anomaly at p < 0.05 significance.',
         scopeNote: {
-          title: 'Scope constraint flagged by adversarial review',
+          title: 'Constraint flagged by adversarial review',
           body: 'The 5-year observation window (2019–2024) is acknowledged as a scope limitation. Findings should be framed as period-specific correlations rather than multi-decadal climate trends. This constraint was identified by the idea_hater agent during the adversarial loop and incorporated into the hypothesis framing before finalisation.',
           suggestions: [
             {
@@ -94,38 +94,58 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       stageData: {
         kind: 'methods',
         overview: 'This methodology outlines the complete analytical framework for investigating the temporal correlation between atmospheric CO₂ concentration (ppm) and surface temperature anomalies (°C) across a five-year observation window (2019–2024). The pipeline applies a time-series regression approach using pandas and statsmodels.',
-        steps: [
+        sections: [
           {
-            n: '01',
-            label: 'Data Ingestion & Validation',
-            tool: 'pandas',
-            description: 'Load co2_readings.csv and temp_anomalies.csv using pd.read_csv(). Assert column dtypes, validate date index continuity 2019–2024. Flag null values and log row count.',
-            codeSnippet: "df_co2 = pd.read_csv('co2_readings.csv', parse_dates=['date'], index_col='date')",
+            number: '1',
+            title: 'Data Preparation',
+            substeps: [
+              {
+                number: '1.1',
+                label: 'Data Ingestion & Validation',
+                body: 'Load `co2_readings.csv` and `temp_anomalies.csv` using `pandas.read_csv()`, assert column dtypes, and validate date index continuity across 2019–2024.',
+                points: [],
+                code: "df_co2 = pd.read_csv('co2_readings.csv', parse_dates=['date'], index_col='date')",
+              },
+              {
+                number: '1.2',
+                label: 'Preprocessing & Alignment',
+                body: null,
+                points: [
+                  { text: "Resample both series to monthly frequency using `.resample('MS').mean()`." },
+                  { text: 'Apply linear interpolation for gaps under 3 consecutive months.' },
+                  { text: 'Normalise units — CO₂ as ppm deviation from a 415ppm baseline.' },
+                ],
+              },
+            ],
           },
           {
-            n: '02',
-            label: 'Preprocessing & Alignment',
-            tool: 'pandas',
-            description: "Resample both series to monthly frequency using .resample('MS').mean(). Apply linear interpolation for gaps under 3 consecutive months. Normalise units — CO₂ as ppm deviation from 415ppm baseline.",
-          },
-          {
-            n: '03',
-            label: 'Exploratory Time-Series Analysis',
-            tool: 'matplotlib',
-            description: 'Generate dual-axis time-series plot. Compute rolling 12-month Pearson correlation window. Export as co2_temp_timeseries.png at 300dpi.',
-          },
-          {
-            n: '04',
-            label: 'Statistical Correlation Testing',
-            tool: 'statsmodels · scipy',
-            description: 'Run scipy.stats.pearsonr and spearmanr. Fit OLS regression using statsmodels. Evaluate p-values, R², and residual plots for heteroscedasticity.',
-            codeSnippet: "model = smf.ols('temp_anomaly ~ co2_concentration', data=df_merged).fit()",
-          },
-          {
-            n: '05',
-            label: 'Result Compilation & Export',
-            tool: 'markdown',
-            description: 'Export OLS summary, Pearson/Spearman coefficients, and plots to results.md and /plots directory. Assert results.md exists before pipeline advances.',
+            number: '2',
+            title: 'Statistical Analysis',
+            substeps: [
+              {
+                number: '2.1',
+                label: 'Exploratory Time-Series Analysis',
+                body: 'Generate a dual-axis time-series plot and compute a rolling 12-month Pearson correlation window, exported as `co2_temp_timeseries.png` at 300dpi.',
+                points: [],
+              },
+              {
+                number: '2.2',
+                label: 'Statistical Correlation Testing',
+                body: null,
+                points: [
+                  { text: 'Run `scipy.stats.pearsonr` and `spearmanr`.' },
+                  { text: 'Fit an OLS regression using `statsmodels`.' },
+                  { text: 'Evaluate p-values, R², and residual plots for heteroscedasticity.' },
+                ],
+                code: "model = smf.ols('temp_anomaly ~ co2_concentration', data=df_merged).fit()",
+              },
+              {
+                number: '2.3',
+                label: 'Result Compilation & Export',
+                body: 'Export the OLS summary, Pearson/Spearman coefficients, and plots to `results.md` and the `/plots` directory.',
+                points: [],
+              },
+            ],
           },
         ],
       } satisfies MethodsResultData,
@@ -289,7 +309,7 @@ export async function startStage(stageId: StageId, track: Track) {
         if (event.type === 'log') {
           updateMessage(msgId, { content: event.text });
         } else if (event.type === 'complete') {
-          _onStageComplete(stageId, track, event.result?.duration_sec ?? null, msgId, event.result?.content);
+          _onStageComplete(stageId, track, event.result?.duration_sec ?? null, msgId, event.result?.content, event.result?.structured);
         } else if (event.type === 'error') {
           _onStageError(stageId, msgId, event.error);
         }
@@ -354,11 +374,12 @@ function _onStageComplete(
   durationSec: number | null,
   msgId:       string,
   rawContent?: string | null,
+  structured?: Record<string, unknown> | null,
 ) {
   const { setStageResult, setStageStatus, updateMessage, removeMessage } = usePipelineStore.getState();
 
   const mock   = buildMockResult(stageId, track);
-  const result = parseBackendResult(stageId, track, rawContent ?? null, durationSec, mock);
+  const result = parseBackendResult(stageId, track, rawContent ?? null, durationSec, mock, structured);
   const { durationLabel } = result;
 
   setStageResult(stageId, result);

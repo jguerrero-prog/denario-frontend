@@ -88,7 +88,7 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
     // suggestions: no backend support yet for tailored suggestions — reuse the
     // mock's placeholder set so the chip UI/design can be iterated on now.
     scopeNote: scopeBody
-      ? { title: 'Scope constraint', body: scopeBody, suggestions: mockData.scopeNote?.suggestions }
+      ? { title: 'Constraint', body: scopeBody, suggestions: mockData.scopeNote?.suggestions }
       : null,
     // loopLog — adversarial loop internals are not surfaced in idea.md; hide rather than mock
     loopLog: loopLines.length > 0 ? loopLines : [],
@@ -105,7 +105,17 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
   };
 }
 
-function parseMethods(content: string, mock: StageResult): Partial<StageResult> {
+// The Methods (and Analysis) stage emits schema-constrained structured data —
+// see DenarioBackend's StructuredMethodology — so sections/substeps are read
+// directly from `structured` rather than parsed out of markdown. `content`
+// (the rendered methods.md) is only used here for the overview/title, and as
+// a fallback to the mock when structured data isn't present (e.g. mid-migration
+// or a backend that hasn't run the stage yet).
+function parseMethods(
+  content: string,
+  mock: StageResult,
+  structured?: Record<string, unknown> | null,
+): Partial<StageResult> {
   const mockData = mock.stageData as MethodsResultData;
 
   const overview =
@@ -113,54 +123,12 @@ function parseMethods(content: string, mock: StageResult): Partial<StageResult> 
     firstParagraph(content) ??
     '';
 
-  // Match "### N. Label" (backend default, 3 hashes) or "## Step N: Label" (legacy 2 hashes)
-  const stepRe =
-    /#{2,3}\s+(?:Step\s+)?(\d+)[.:]\s*(.+?)\s*\n([\s\S]*?)(?=\n#{2,3}\s+(?:Step\s+)?\d+[.:]|\n#{2,3}|\s*$)/gi;
-  const steps: MethodsResultData['steps'] = [];
-  let m: RegExpExecArray | null;
-  while ((m = stepRe.exec(content)) !== null) {
-    const body = m[3].trim();
-    const toolMatch = body.match(/\*\*Tools?\*\*:\s*(.+)/i);
-    const codeMatch = body.match(/```[a-z]*\n([\s\S]*?)```/);
-    steps.push({
-      n: m[1].padStart(2, '0'),
-      label: m[2].trim(),
-      tool: toolMatch ? toolMatch[1].trim() : '',
-      description: body
-        .replace(/\*\*Tools?\*\*:.*\n?/gi, '')
-        .replace(/```[\s\S]*?```/g, '')
-        .trim(),
-      ...(codeMatch ? { codeSnippet: codeMatch[1].trim() } : {}),
-    });
-  }
+  const sections =
+    structured && Array.isArray(structured.sections)
+      ? (structured.sections as MethodsResultData['sections'])
+      : mockData.sections;
 
-  // Fallback: bold Roman-numeral headers "**I. Title**" (e.g. CRISPR-style output)
-  if (steps.length === 0) {
-    const boldRe = /^\*\*([IVX]+)\.\s+([^*]+?)\*\*\s*\n([\s\S]*?)(?=^\*\*[IVX]+\.|\s*$)/gim;
-    let idx = 0;
-    while ((m = boldRe.exec(content)) !== null) {
-      idx++;
-      const body = m[3].trim();
-      const toolMatch = body.match(/\*\*Tools?\*\*:\s*(.+)/i);
-      const codeMatch = body.match(/```[a-z]*\n([\s\S]*?)```/);
-      steps.push({
-        n: String(idx).padStart(2, '0'),
-        label: m[2].trim(),
-        tool: toolMatch ? toolMatch[1].trim() : '',
-        description: body
-          .replace(/\*\*Tools?\*\*:.*\n?/gi, '')
-          .replace(/```[\s\S]*?```/g, '')
-          .trim(),
-        ...(codeMatch ? { codeSnippet: codeMatch[1].trim() } : {}),
-      });
-    }
-  }
-
-  const stageData: MethodsResultData = {
-    ...mockData,
-    overview,
-    steps: steps.length > 0 ? steps : mockData.steps,
-  };
+  const stageData: MethodsResultData = { ...mockData, overview, sections };
 
   return {
     title: extractTitle(content) ?? undefined,
@@ -376,6 +344,7 @@ export function parseBackendResult(
   rawContent:  string | null,
   durationSec: number | null,
   mock:        StageResult,
+  structured?: Record<string, unknown> | null,
 ): StageResult {
   const durationLabel = fmtDuration(durationSec) ?? mock.durationLabel;
 
@@ -385,7 +354,7 @@ export function parseBackendResult(
   try {
     switch (stageId) {
       case 'idea':       parsed = parseIdea(rawContent, mock);       break;
-      case 'methods':    parsed = parseMethods(rawContent, mock);    break;
+      case 'methods':    parsed = parseMethods(rawContent, mock, structured); break;
       case 'analysis':   parsed = parseAnalysis(rawContent, mock);   break;
       case 'paper':      parsed = parsePaper(rawContent, mock);      break;
       case 'literature': parsed = parseLiterature(rawContent, mock); break;

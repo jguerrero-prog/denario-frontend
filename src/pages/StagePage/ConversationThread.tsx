@@ -43,7 +43,6 @@ function CyclingStatus({ stageId }: { stageId: StageId }) {
   if (!isRunning) {
     return (
       <div className={styles.cyclingStatus}>
-        <div className={styles.cyclingDotDone} />
         <span className={styles.cyclingText}>Complete</span>
       </div>
     );
@@ -51,7 +50,6 @@ function CyclingStatus({ stageId }: { stageId: StageId }) {
 
   return (
     <div className={styles.cyclingStatus}>
-      <div className={styles.cyclingDot} />
       <span className={styles.cyclingText} style={{ opacity: visible ? 1 : 0 }}>
         {statuses[idx]}
       </span>
@@ -126,7 +124,6 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
       <div className={styles.aiHeader}>
         <div className={styles.aiHeaderLeft}>
           <div className={styles.aiAvatar}><DenarioRing /></div>
-          <span className={styles.aiName}>Denario</span>
         </div>
         <span className={styles.aiTimestamp}>{timeLabel}</span>
       </div>
@@ -210,8 +207,8 @@ function SuggestionFollowupBubble({ message }: { message: Message }) {
   return (
     <DenarioBubble message={message}>
       {!acted && message.actionLabel && (
-        <div className={styles.aiActions}>
-          <button className={styles.actionPrimary} onClick={handleAct}>
+        <div className={styles.suggestionFollowupActions}>
+          <button className={styles.suggestionFollowupBtn} onClick={handleAct}>
             {message.actionLabel}
           </button>
         </div>

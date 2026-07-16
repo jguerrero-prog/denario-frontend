@@ -131,7 +131,7 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     paramFields: [],
     denarioOpener:
-      'Hypothesis approved. The Methods sub-swarm will translate it into a concrete technical roadmap. The planner drafts, the reviewer critiques, and the method generator finalises. Ready?',
+      "Hypothesis approved. The Methods sub-swarm will translate it into a concrete technical roadmap. The planner drafts, the reviewer critiques, and the method generator finalises. Select the mode below when you're ready.",
   },
 
   analysis: {

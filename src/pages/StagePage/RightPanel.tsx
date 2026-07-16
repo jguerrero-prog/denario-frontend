@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { MarkdownBlock } from '../../utils/MarkdownBlock';
+import { useNavigate, useParams } from 'react-router-dom';
+import { InlineMarkdown } from '../../utils/MarkdownBlock';
 import { STAGE_CONFIG } from '../../config/stageConfig';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { api } from '../../api/client';
@@ -151,38 +151,61 @@ function IdeaReadingView({ result }: { result: StageResult }) {
   const data = result.stageData as IdeaResultData | undefined;
   const hypothesis = data?.hypothesis ?? result.content;
   const scopeNote  = data?.scopeNote;
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
+
+  function handleOpenFull() {
+    if (projectId) navigate(`/project/${projectId}/stage/${result.stageId}/full`);
+  }
 
   return (
     <div className={styles.readingView}>
       <p className={styles.readingTitle}>{result.title}</p>
       <p className={styles.readingProse}>{hypothesis}</p>
       {scopeNote && (
-        <p className={styles.readingScopeNote}>
-          {typeof scopeNote === 'string' ? scopeNote : `${scopeNote.title} — ${scopeNote.body}`}
-        </p>
+        <>
+          <p className={styles.readingScopeNote}>
+            {typeof scopeNote === 'string' ? scopeNote : `${scopeNote.title} — ${scopeNote.body}`}
+          </p>
+          <button className={styles.readingOpenFullBtn} onClick={handleOpenFull}>
+            Open full →
+          </button>
+        </>
       )}
     </div>
   );
 }
 
 function MethodsReadingView({ result }: { result: StageResult }) {
-  const data  = result.stageData as MethodsResultData | undefined;
-  const steps = data?.steps ?? [];
+  const data     = result.stageData as MethodsResultData | undefined;
+  const sections = data?.sections ?? [];
 
   return (
     <div className={styles.readingView}>
       <p className={styles.readingTitle}>{result.title}</p>
-      <div className={styles.readingStepList}>
-        {steps.map(({ n, label, tool, description }) => (
-          <div key={n} className={styles.readingStepItem}>
-            <div className={styles.readingStepTop}>
-              <span className={styles.readingStepNum}>{n}</span>
-              <span className={styles.readingStepLabel}>{label}</span>
-              {tool && <span className={styles.readingToolChip}>{tool}</span>}
+      <div className={styles.readingSectionList}>
+        {sections.map(section => (
+          <div key={section.number} className={styles.readingSection}>
+            <p className={styles.readingSectionTitle}>{section.number}. {section.title}</p>
+            <div className={styles.readingStepList}>
+              {section.substeps.map(({ number, label, body, points, code }) => (
+                <div key={number} className={styles.readingStepItem}>
+                  <div className={styles.readingStepTop}>
+                    <span className={styles.readingStepNum}>{number}</span>
+                    <span className={styles.readingStepLabel}>{label}</span>
+                  </div>
+                  {body && <p className={styles.readingStepDesc}><InlineMarkdown text={body} /></p>}
+                  {points.length > 0 && (
+                    <ul className={styles.readingStepPointList}>
+                      {points.map((pt, pi) => (
+                        <li key={pi} className={styles.readingStepPoint}><InlineMarkdown text={pt.text} /></li>
+                      ))}
+                    </ul>
+                  )}
+                  {code && <pre className={styles.readingStepCode}><code>{code}</code></pre>}
+                </div>
+              ))}
             </div>
-            {description && (
-              <MarkdownBlock text={description} className={styles.readingStepDesc} />
-            )}
           </div>
         ))}
       </div>

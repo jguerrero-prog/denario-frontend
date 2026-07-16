@@ -14,6 +14,7 @@ export interface BackendStageResult {
   file:         string | null;
   title:        string | null;
   content:      string | null;
+  structured:   Record<string, unknown> | null;  // schema-constrained data (currently: methods/analysis)
   tags:         string[];
   duration_sec: number | null;
   generated_at: number | null;

@@ -209,13 +209,6 @@
   flex-shrink: 0;
 }
 
-.aiName {
-  font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 13px;
-  color: var(--color-text-pri);
-}
-
 .aiTimestamp {
   font-family: var(--font-body);
   font-weight: 400;
@@ -245,7 +238,7 @@
 }
 
 .actionPrimary {
-  background: var(--color-brand);
+  background: #000000;
   border: none;
   border-radius: 8px;
   padding: 8px 14px;
@@ -259,7 +252,7 @@
 }
 
 .actionPrimary:hover {
-  background: var(--color-brand-dark);
+  background: #2F2F2F;
 }
 
 .actionSecondary {
@@ -286,6 +279,29 @@
   font-style: italic;
   font-size: 12px;
   color: var(--color-text-mut);
+}
+
+/* ── Suggestion follow-up action ── */
+
+.suggestionFollowupActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.suggestionFollowupBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 
 /* ── User reply bubble ── */
@@ -318,27 +334,10 @@
   height: 22px;
 }
 
-.cyclingDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-brand);
-  flex-shrink: 0;
-  animation: pulse 1.4s ease-in-out infinite;
-}
-
-.cyclingDotDone {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-brand);
-  flex-shrink: 0;
-}
-
 .cyclingText {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-style: italic;
+  font-family: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-style: normal;
   color: var(--color-text-sec);
   transition: opacity 0.35s ease;
 }
@@ -746,7 +745,7 @@
 }
 
 .panelDownloadBtn:hover {
-  background: var(--color-bg-inset);
+  background: #F4F4F4;
   color: var(--color-text-pri);
 }
 
@@ -831,7 +830,45 @@
   border-radius: 0 4px 4px 0;
 }
 
+.readingOpenFullBtn {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  margin-top: 10px; /* .readingView already applies 14px gap; total = 24px */
+  padding: 10px var(--space-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
 /* Methods steps */
+
+.readingSectionList {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.readingSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.readingSectionTitle {
+  font-family: var(--font-heading);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  margin: 0;
+}
 
 .readingStepList {
   display: flex;
@@ -852,15 +889,14 @@
 }
 
 .readingStepNum {
-  width: 20px;
+  min-width: 20px;
   height: 20px;
-  border-radius: 50%;
-  background: var(--color-bg-app);
-  border: 1px solid var(--color-border-def);
+  border-radius: 10px;
+  background: none;
   font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 600;
-  color: var(--color-text-sec);
+  font-weight: 700;
+  color: var(--color-text-pri);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -868,32 +904,49 @@
 }
 
 .readingStepLabel {
-  font-family: var(--font-body);
-  font-size: 13px;
+  font-family: var(--font-heading);
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-text-pri);
   flex: 1;
   min-width: 0;
 }
 
-.readingToolChip {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--color-brand);
-  background: var(--color-brand-light);
-  border: 1px solid #C4D9C4;
-  border-radius: 4px;
-  padding: 2px 6px;
-  flex-shrink: 0;
-}
-
 .readingStepDesc {
-  font-family: var(--font-body);
+  font-family: var(--font-heading);
   font-size: 13px;
   line-height: 1.55;
-  color: var(--color-text-mut);
+  color: var(--color-text-pri);
   margin: 0 0 0 28px;
+}
+
+.readingStepPointList {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  list-style-type: disc;
+  margin: 0;
+  padding-left: 44px;
+}
+
+.readingStepPoint {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-text-pri);
+}
+
+.readingStepCode {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: #F4F4F4;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 0 0 0 28px;
+  color: var(--color-text-pri);
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
 }
 
 /* Analysis stats */

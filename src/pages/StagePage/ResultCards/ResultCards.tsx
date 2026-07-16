@@ -5,6 +5,7 @@ import { startStage } from '../../../utils/stageRunner';
 import { api } from '../../../api/client';
 import { nextStage } from '../../../config/stageConfig';
 import { PlotLightbox } from '../../../components/PlotLightbox/PlotLightbox';
+import { InlineMarkdown } from '../../../utils/MarkdownBlock';
 import type {
   StageId,
   StageResult,
@@ -321,57 +322,60 @@ function IdeaResultCard({ result, onApprove, onOpenFull }: CardProps) {
 
 function MethodsResultCard({ result, onApprove, onOpenFull }: CardProps) {
   const data = result.stageData as MethodsResultData | undefined;
-  const steps = data?.steps ?? [];
+  const sections = data?.sections ?? [];
+  const flatSubsteps = sections.flatMap(sec => sec.substeps);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(0);
   const [titleDraft, setTitleDraft] = useState(result.title ?? '');
   const [stepDrafts, setStepDrafts] = useState<Array<{ label: string; description: string }>>(
-    () => steps.map(s => ({ label: s.label, description: s.description ?? '' }))
+    () => flatSubsteps.map(s => ({ label: s.label, description: s.body ?? s.points.map(p => p.text).join('\n') }))
   );
+  const [copied, setCopied] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(result.content).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
 
   if (isEditing) {
     return (
-      <div className={styles.editForm}>
+      <div className={`${styles.editForm} ${styles.editFormIdea}`}>
         <div className={styles.editFormHeader}>
-          <div className={styles.editFormFile}>
-            <div className={styles.editDot} />
-            <span className={styles.editFileName}>{result.file}</span>
-          </div>
-          <span className={styles.editingLabel}>Editing</span>
+          <span className={styles.headerBadgeLabel}>Methods</span>
+          <span className={`${styles.editingLabel} ${styles.editingLabelIdea}`}>Editing</span>
         </div>
 
         <input
-          className={styles.editTitleInput}
+          className={`${styles.editTitleInput} ${styles.editTitleInputIdea}`}
           value={titleDraft}
           onChange={e => setTitleDraft(e.target.value)}
           autoFocus
         />
 
         <div className={styles.stepStack}>
-          {steps.map((step, i) => {
+          {flatSubsteps.map((step, i) => {
             const isActive = editingStepIdx === i;
             return (
               <div
-                key={step.n}
-                className={`${styles.stepEditItem} ${i < steps.length - 1 ? styles.stepEditItemBorder : ''}`}
+                key={step.number}
+                className={`${styles.stepEditItem} ${i < flatSubsteps.length - 1 ? styles.stepEditItemBorder : ''}`}
               >
                 <div className={styles.stepEditHeader}>
                   <div className={styles.stepLeft}>
-                    <div className={styles.stepBadge}>{step.n}</div>
+                    <div className={styles.stepBadge}>{step.number}</div>
                     <span className={styles.stepLabel}>{step.label}</span>
                   </div>
                   {!isActive && (
-                    <>
-                      <div className={styles.toolChip}><span className={styles.toolChipText}>{step.tool}</span></div>
-                      <button
-                        className={styles.stepPencilBtn}
-                        onClick={() => setEditingStepIdx(i)}
-                        aria-label="Edit step"
-                      >
-                        <PencilIcon />
-                      </button>
-                    </>
+                    <button
+                      className={styles.stepPencilBtn}
+                      onClick={() => setEditingStepIdx(i)}
+                      aria-label="Edit step"
+                    >
+                      <PencilIcon />
+                    </button>
                   )}
                 </div>
                 {isActive && (
@@ -400,39 +404,82 @@ function MethodsResultCard({ result, onApprove, onOpenFull }: CardProps) {
 
         <Divider />
         <div className={styles.editActions}>
-          <button className={styles.editCancelBtn} onClick={() => setIsEditing(false)}>Cancel</button>
-          <button className={styles.editSaveBtn} onClick={() => { setIsEditing(false); onApprove(); }}>Save →</button>
+          <button className={`${styles.editCancelBtn} ${styles.editCancelBtnIdea}`} onClick={() => setIsEditing(false)}>Cancel</button>
+          <button className={`${styles.editSaveBtn} ${styles.editSaveBtnIdea}`} onClick={() => { setIsEditing(false); onApprove(); }}>Save →</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={styles.cardOuter}>
-      <div className={styles.editSlot}>
-        <button className={styles.editBtn} onClick={() => setIsEditing(true)} aria-label="Edit method">
-          <PencilIcon />
-        </button>
-      </div>
-      <div className={styles.editCardBody}>
-        <div className={styles.card}>
-          <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} />
-          <Divider />
-          <p className={styles.cardTitle}>{result.title}</p>
-          <div className={styles.stepStack}>
-            {steps.map(({ n, label, tool }, i) => (
-              <div key={n} className={`${styles.stepRow} ${i < steps.length - 1 ? styles.stepRowBorder : ''}`}>
-                <div className={styles.stepLeft}>
-                  <div className={styles.stepBadge}>{n}</div>
-                  <span className={styles.stepLabel}>{label}</span>
+    <div className={`${styles.card} ${styles.cardIdea}`}>
+      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} badgeLabel="Methods" />
+      <Divider />
+      <p className={`${styles.cardTitle} ${styles.cardTitleIdea}`}>{result.title}</p>
+      <div className={styles.methodSectionStack}>
+        {sections.map(section => (
+          <div key={section.number} className={styles.methodSection}>
+            <p className={styles.methodSectionTitle}>{section.number}. {section.title}</p>
+            <div className={styles.stepStack}>
+              {section.substeps.map(({ number, label, body, points, code }, i) => (
+                <div key={number} className={`${styles.stepRow} ${i < section.substeps.length - 1 ? styles.stepRowBorder : ''}`}>
+                  <div className={styles.stepRowTop}>
+                    <div className={styles.stepLeft}>
+                      <div className={styles.stepBadge}>{number}</div>
+                      <span className={styles.stepLabel}>{label}</span>
+                    </div>
+                  </div>
+                  {body && <p className={styles.stepBodyText}><InlineMarkdown text={body} /></p>}
+                  {points.length > 0 && (
+                    <ul className={styles.stepPointList}>
+                      {points.map((pt, pi) => (
+                        <li key={pi} className={styles.stepPoint}><InlineMarkdown text={pt.text} /></li>
+                      ))}
+                    </ul>
+                  )}
+                  {code && (
+                    <pre className={styles.stepCodeBlock}><code>{code}</code></pre>
+                  )}
                 </div>
-                <div className={styles.toolChip}><span className={styles.toolChipText}>{tool}</span></div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-          <TagRow tags={result.tags} />
-          <Divider />
-          <ActionRow ghost="Edit method" onGhost={() => setIsEditing(true)} primary="Run Analysis →" onPrimary={onApprove} />
+        ))}
+      </div>
+      <TagRow tags={result.tags} tagClassName={styles.tagChipIdea} />
+      <Divider />
+      <div className={styles.ideaBottomRow}>
+        <div className={styles.reactionRow}>
+          <button className={styles.reactionBtn} onClick={() => setIsEditing(true)} aria-label="Edit methods" title="Edit">
+            <PencilIcon />
+          </button>
+          <button className={styles.reactionBtn} onClick={handleCopy} aria-label="Copy methods" title="Copy">
+            {copied ? <CheckSmallIcon /> : <CopyIcon />}
+          </button>
+          <button
+            className={`${styles.reactionBtn} ${feedback === 'up' ? styles.reactionBtnActive : ''}`}
+            onClick={() => setFeedback(f => f === 'up' ? null : 'up')}
+            aria-label="Good methodology"
+            title="Good methodology"
+          >
+            <ThumbsUpIcon />
+          </button>
+          <button
+            className={`${styles.reactionBtn} ${feedback === 'down' ? styles.reactionBtnActive : ''}`}
+            onClick={() => setFeedback(f => f === 'down' ? null : 'down')}
+            aria-label="Needs work"
+            title="Needs work"
+          >
+            <ThumbsDownIcon />
+          </button>
+        </div>
+        <div className={styles.ideaActionsWrap}>
+          <ActionRow
+            ghost="Edit method" onGhost={() => setIsEditing(true)}
+            primary="Run Analysis →" onPrimary={onApprove}
+            ghostClassName={styles.ghostBtnIdea}
+            primaryClassName={styles.primaryBtnIdea}
+          />
         </div>
       </div>
     </div>

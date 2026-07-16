@@ -38,7 +38,7 @@
 
   /* Typography */
   --font-heading: 'Literata', Georgia, serif;
-  --font-body:    'Instrument Sans Variable', system-ui, sans-serif;
+  --font-body:    'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, monospace;
 
   /* Font Sizes */

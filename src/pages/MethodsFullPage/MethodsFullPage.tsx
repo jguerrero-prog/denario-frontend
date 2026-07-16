@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { STAGE_CONFIG, STAGE_ORDER } from '../../config/stageConfig';
-import { MarkdownBlock } from '../../utils/MarkdownBlock';
+import { InlineMarkdown } from '../../utils/MarkdownBlock';
 import type { MethodsResultData, StageId } from '../../types/pipeline';
 import styles from './MethodsFullPage.module.css';
 
@@ -77,11 +77,14 @@ export function MethodsFullPage() {
   const stageNum = stageIndex >= 0 ? stageIndex + 1 : 3;
   const file = result?.file ?? 'method.md';
 
+  const sections = data?.sections ?? [];
+  const flatSubsteps = sections.flatMap(sec => sec.substeps);
+
   const [isEditing, setIsEditing] = useState(false);
   const [editingStepIdx, setEditingStepIdx] = useState<number | null>(null);
   const [titleDraft, setTitleDraft] = useState(result?.title ?? '');
   const [stepDrafts, setStepDrafts] = useState<Array<{ label: string; description: string }>>(
-    () => (data?.steps ?? []).map(s => ({ label: s.label, description: s.description }))
+    () => flatSubsteps.map(s => ({ label: s.label, description: s.body ?? s.points.map(p => p.text).join('\n') }))
   );
 
   function handleBack() {
@@ -92,8 +95,6 @@ export function MethodsFullPage() {
     setIsEditing(false);
     setEditingStepIdx(null);
   }
-
-  const steps = data?.steps ?? [];
 
   return (
     <div className={styles.layout}>
@@ -153,88 +154,92 @@ export function MethodsFullPage() {
             {data?.overview && (
               <div className={styles.section}>
                 <p className={styles.sectionLabel}>Overview</p>
-                <MarkdownBlock text={data.overview} className={styles.prose} />
+                <p className={styles.prose}><InlineMarkdown text={data.overview} /></p>
               </div>
             )}
 
             {/* Execution Steps */}
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Execution Steps</p>
-              <div className={styles.stepCards}>
-                {steps.map((step, i) => {
-                  const isActive = isEditing && editingStepIdx === i;
-                  return (
-                    <div
-                      key={step.n}
-                      className={`${styles.stepCard} ${isActive ? styles.stepCardActive : ''}`}
-                    >
-                      {/* Step header */}
-                      <div className={styles.stepCardHeader}>
-                        <div className={styles.stepCardLeft}>
-                          <div className={styles.stepBadge}>{step.n}</div>
+              {sections.map(section => (
+                <div key={section.number} className={styles.methodSection}>
+                  <p className={styles.methodSectionTitle}>{section.number}. {section.title}</p>
+                  <div className={styles.stepCards}>
+                    {section.substeps.map(step => {
+                      const i = flatSubsteps.indexOf(step);
+                      const isActive = isEditing && editingStepIdx === i;
+                      return (
+                        <div
+                          key={step.number}
+                          className={`${styles.stepCard} ${isActive ? styles.stepCardActive : ''}`}
+                        >
+                          {/* Step header */}
+                          <div className={styles.stepCardHeader}>
+                            <div className={styles.stepCardLeft}>
+                              <div className={styles.stepBadge}>{step.number}</div>
+                              {isActive ? (
+                                <input
+                                  className={styles.stepTitleInput}
+                                  value={stepDrafts[i]?.label ?? step.label}
+                                  onChange={e => {
+                                    const next = [...stepDrafts];
+                                    next[i] = { ...next[i], label: e.target.value };
+                                    setStepDrafts(next);
+                                  }}
+                                />
+                              ) : (
+                                <span className={styles.stepCardTitle}>{step.label}</span>
+                              )}
+                            </div>
+                            {isEditing && !isActive && (
+                              <button
+                                className={styles.stepPencilBtn}
+                                onClick={() => setEditingStepIdx(i)}
+                                aria-label="Edit step"
+                              >
+                                <PencilIcon />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Description */}
                           {isActive ? (
-                            <input
-                              className={styles.stepTitleInput}
-                              value={stepDrafts[i]?.label ?? step.label}
+                            <textarea
+                              className={styles.stepDescTextarea}
+                              value={stepDrafts[i]?.description ?? ''}
                               onChange={e => {
                                 const next = [...stepDrafts];
-                                next[i] = { ...next[i], label: e.target.value };
+                                next[i] = { ...next[i], description: e.target.value };
                                 setStepDrafts(next);
                               }}
+                              rows={4}
                             />
                           ) : (
-                            <span className={styles.stepCardTitle}>{step.label}</span>
+                            <>
+                              {step.body && <p className={styles.stepCardBody}><InlineMarkdown text={step.body} /></p>}
+                              {step.points.length > 0 && (
+                                <ul className={styles.stepPointList}>
+                                  {step.points.map((pt, pi) => (
+                                    <li key={pi} className={styles.stepPoint}><InlineMarkdown text={pt.text} /></li>
+                                  ))}
+                                </ul>
+                              )}
+                            </>
+                          )}
+
+                          {/* Code snippet */}
+                          {!isActive && step.code && (
+                            <div className={styles.codeBlock}>
+                              <div className={styles.codeAccent} />
+                              <code className={styles.codeText}>{step.code}</code>
+                            </div>
                           )}
                         </div>
-                        {isEditing && !isActive && (
-                          <div className={styles.stepCardActions}>
-                            <div className={styles.toolChip}><span className={styles.toolChipText}>{step.tool}</span></div>
-                            <button
-                              className={styles.stepPencilBtn}
-                              onClick={() => setEditingStepIdx(i)}
-                              aria-label="Edit step"
-                            >
-                              <PencilIcon />
-                            </button>
-                          </div>
-                        )}
-                        {!isEditing && (
-                          <div className={styles.toolChip}><span className={styles.toolChipText}>{step.tool}</span></div>
-                        )}
-                      </div>
-
-                      {/* Description */}
-                      {isActive ? (
-                        <>
-                          <textarea
-                            className={styles.stepDescTextarea}
-                            value={stepDrafts[i]?.description ?? step.description}
-                            onChange={e => {
-                              const next = [...stepDrafts];
-                              next[i] = { ...next[i], description: e.target.value };
-                              setStepDrafts(next);
-                            }}
-                            rows={4}
-                          />
-                          <div className={styles.toolChipRow}>
-                            <div className={styles.toolChip}><span className={styles.toolChipText}>{step.tool}</span></div>
-                          </div>
-                        </>
-                      ) : (
-                        <MarkdownBlock text={step.description} className={styles.stepCardBody} />
-                      )}
-
-                      {/* Code snippet */}
-                      {!isActive && step.codeSnippet && (
-                        <div className={styles.codeBlock}>
-                          <div className={styles.codeAccent} />
-                          <code className={styles.codeText}>{step.codeSnippet}</code>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* End footer */}

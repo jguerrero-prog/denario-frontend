@@ -1,41 +1,8 @@
-.root {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.para {
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  color: var(--color-text-sec);
-  line-height: 1.6;
-  margin: 0;
-}
-
-.ol {
-  margin: 0;
-  padding-left: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ul {
-  margin: 4px 0 0 0;
-  padding-left: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.li {
-  font-family: var(--font-body);
-  font-size: var(--text-base);
-  color: var(--color-text-sec);
-  line-height: 1.55;
-}
-
-.li strong {
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: #F4F4F4;
+  border-radius: 4px;
+  padding: 1px 5px;
   color: var(--color-text-pri);
-  font-weight: 600;
 }

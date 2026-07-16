@@ -64,16 +64,28 @@ export interface IdeaResultData {
   meta: { track: string; iterations: number; duration: string };
 }
 
+export interface MethodPoint {
+  text: string;
+}
+
+export interface MethodSubStep {
+  number: string;         // e.g. '6.4'
+  label: string;          // e.g. 'Correlation Analysis'
+  body?: string | null;   // single inline explanation — mutually exclusive with `points`
+  points: MethodPoint[];  // explanatory bullet points — mutually exclusive with `body`
+  code?: string | null;   // optional short code snippet
+}
+
+export interface MethodSection {
+  number: string;  // e.g. '6'
+  title: string;   // e.g. 'Statistical Analysis'
+  substeps: MethodSubStep[];
+}
+
 export interface MethodsResultData {
   kind: 'methods';
   overview: string;
-  steps: Array<{
-    n: string;
-    label: string;
-    tool: string;
-    description: string;
-    codeSnippet?: string;
-  }>;
+  sections: MethodSection[];
 }
 
 export interface AnalysisResultData {
