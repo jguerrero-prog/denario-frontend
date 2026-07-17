@@ -104,7 +104,7 @@ function PlotImage({
   const [failed, setFailed] = useState(false);
 
   if (backendProjectId && !failed) {
-    const src = api.fileUrl(backendProjectId, `plots/${name}`);
+    const src = api.fileUrl(backendProjectId, `input_files/plots/${name}`);
     return (
       <img
         key={src}

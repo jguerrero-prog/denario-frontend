@@ -179,10 +179,19 @@ function IdeaReadingView({ result }: { result: StageResult }) {
 function MethodsReadingView({ result }: { result: StageResult }) {
   const data     = result.stageData as MethodsResultData | undefined;
   const sections = data?.sections ?? [];
+  const navigate = useNavigate();
+  const { projectId } = useParams<{ projectId: string }>();
+
+  function handleOpenFull() {
+    if (projectId) navigate(`/project/${projectId}/stage/${result.stageId}/full`);
+  }
 
   return (
     <div className={styles.readingView}>
       <p className={styles.readingTitle}>{result.title}</p>
+      <button className={styles.readingOpenFullBtn} onClick={handleOpenFull}>
+        Open full →
+      </button>
       <div className={styles.readingSectionList}>
         {sections.map(section => (
           <div key={section.number} className={styles.readingSection}>
