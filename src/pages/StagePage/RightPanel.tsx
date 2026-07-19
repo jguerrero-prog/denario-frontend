@@ -5,7 +5,6 @@ import { STAGE_CONFIG } from '../../config/stageConfig';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { api } from '../../api/client';
 import { PlotLightbox } from '../../components/PlotLightbox/PlotLightbox';
-import { PdfPage, TexEditor, TexFileTab, TEX_INITIAL } from '../PaperFullPage/PaperFullPage';
 import type {
   StageId,
   StageStatus,
@@ -29,7 +28,6 @@ const STAGE_ORDER: StageId[] = [
 const PANEL_MIN     = 300;
 const PANEL_DEFAULT = 340;
 const PANEL_WIDE    = 640;
-const PANEL_FULL    = 520; // threshold: show embedded full view for paper
 
 // ── Dropdown icons ────────────────────────────────────────────────────────────
 
@@ -282,16 +280,14 @@ function AnalysisReadingView({ result }: { result: StageResult }) {
 
 function PaperReadingView({ result }: { result: StageResult }) {
   const data     = result.stageData as PaperResultData | undefined;
-  const abstract = data?.abstract ?? result.content;
-  const journal  = data?.journal  ?? '';
-  const pages    = data?.pdfFile?.pages  ?? '—';
-  const cites    = data?.citations ?? '—';
+  const abstract = data?.abstract || result.content;
+  const cites    = data?.citations ?? 0;
 
   return (
     <div className={styles.readingView}>
       <p className={styles.readingTitle}>{result.title}</p>
-      {journal && (
-        <p className={styles.readingMeta}>{journal.toUpperCase()} · {String(pages)} pp · {String(cites)} refs</p>
+      {cites > 0 && (
+        <p className={styles.readingMeta}>{cites} citation{cites === 1 ? '' : 's'}</p>
       )}
       <p className={styles.readingSectionLabel}>Abstract</p>
       <p className={styles.readingProse}>{abstract}</p>
@@ -300,86 +296,47 @@ function PaperReadingView({ result }: { result: StageResult }) {
 }
 
 function LiteratureReadingView({ result }: { result: StageResult }) {
-  const data    = result.stageData as LiteratureResultData | undefined;
-  const scanned = data?.totalScanned ?? 0;
-  const overlap = data?.overlapCounts ?? { high: 0, gaps: 0, conflicts: 0 };
-  const studies = data?.highOverlapStudies ?? [];
+  const data = result.stageData as LiteratureResultData | undefined;
+  const structured = data?.structured;
 
   return (
     <div className={styles.readingView}>
-      <p className={styles.readingMeta}>{scanned} papers scanned</p>
-      <div className={styles.readingOverlapRow}>
-        <span className={styles.readingOverlapAmber}>{overlap.high} high-overlap</span>
-        <span className={styles.readingOverlapBlue}>{overlap.gaps} citation gaps</span>
-        <span className={styles.readingOverlapRed}>{overlap.conflicts} conflicts</span>
-      </div>
-      {studies.length > 0 && (
-        <>
-          <p className={styles.readingSectionLabel}>High-overlap studies</p>
-          <div className={styles.readingStudyList}>
-            {studies.map(({ pct, title, venue }) => (
-              <div key={pct} className={styles.readingStudyItem}>
-                <span className={styles.readingStudyPct}>{pct}</span>
-                <div className={styles.readingStudyInfo}>
-                  <span className={styles.readingStudyTitle}>{title}</span>
-                  {venue && <span className={styles.readingStudyVenue}>{venue}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+      {structured?.decision && <p className={styles.readingMeta}>{structured.decision}</p>}
+      <p className={styles.readingProse}><InlineMarkdown text={structured?.assessment || result.rawContent || result.content || ''} /></p>
+      {structured && structured.papers.length > 0 && (
+        <p className={styles.readingMeta}>{structured.papers.length} paper{structured.papers.length === 1 ? '' : 's'} compared</p>
       )}
     </div>
   );
 }
 
 function RefereeReadingView({ result }: { result: StageResult }) {
-  const data     = result.stageData as RefereeResultData | undefined;
-  const verdict  = data?.verdict ?? { recommendation: result.content, chip: 'Revision' };
-  const comments = data?.comments ?? [];
+  const data = result.stageData as RefereeResultData | undefined;
+  const structured = data?.structured;
 
   return (
     <div className={styles.readingView}>
-      <div className={styles.readingVerdictRow}>
-        <p className={styles.readingProse}>{verdict.recommendation}</p>
-        <span className={styles.readingVerdictChip}>{verdict.chip}</span>
-      </div>
-      {comments.length > 0 && (
-        <>
-          <p className={styles.readingSectionLabel}>Reviewer comments</p>
-          <div className={styles.readingCommentList}>
-            {comments.map(({ id, label, text }) => (
-              <div key={id} className={styles.readingCommentItem}>
-                <div className={styles.readingCommentHeader}>
-                  <span className={styles.readingCommentLabel}>{label}</span>
-                  <span className={styles.readingCommentId}>{id}</span>
-                </div>
-                <p className={styles.readingCommentText}>{text}</p>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {structured?.score && <p className={styles.readingMeta}>Score: {structured.score}</p>}
+      <p className={styles.readingProse}><InlineMarkdown text={structured?.sections.find(s => /overall|assessment|summary/i.test(s.title))?.body || result.rawContent || result.content || ''} /></p>
     </div>
   );
 }
 
 function KeywordsReadingView({ result }: { result: StageResult }) {
-  const data   = result.stageData as KeywordsResultData | undefined;
-  const groups = data?.groups ?? [];
+  const data     = result.stageData as KeywordsResultData | undefined;
+  const keywords = data?.structured?.keywords ?? [];
 
   return (
     <div className={styles.readingView}>
-      {groups.map(({ heading, terms }) => (
-        <div key={heading} className={styles.readingKwGroup}>
-          <p className={styles.readingSectionLabel}>{heading}</p>
-          <div className={styles.readingKwChips}>
-            {terms.map(term => (
-              <span key={term} className={styles.readingKwChip}>{term}</span>
-            ))}
-          </div>
-        </div>
-      ))}
+      <div className={styles.readingKwChips}>
+        {keywords.map(({ term, url }) => (
+          url ? (
+            <a key={term} href={url} target="_blank" rel="noreferrer" className={styles.readingKwChip}>{term}</a>
+          ) : (
+            <span key={term} className={styles.readingKwChip}>{term}</span>
+          )
+        ))}
+      </div>
     </div>
   );
 }
@@ -427,51 +384,6 @@ function PanelReadingView({ stageId }: { stageId: StageId }) {
     case 'keywords':   return <KeywordsReadingView result={result} />;
     default:           return <GenericReadingView result={result} />;
   }
-}
-
-// ── Paper full view embedded in panel ─────────────────────────────────────────
-
-function PaperPanelView({
-  data,
-  title,
-}: {
-  data: PaperResultData | undefined;
-  title: string;
-}) {
-  const [view, setView]             = useState<'pdf' | 'tex'>('pdf');
-  const [texContent, setTexContent] = useState(TEX_INITIAL);
-
-  return (
-    <div className={styles.panelFullView}>
-      <div className={styles.panelTabRow}>
-        <button
-          className={`${styles.panelTab} ${view === 'pdf' ? styles.panelTabActive : ''}`}
-          onClick={() => setView('pdf')}
-        >
-          PDF
-        </button>
-        <button
-          className={`${styles.panelTab} ${view === 'tex' ? styles.panelTabActive : ''}`}
-          onClick={() => setView('tex')}
-        >
-          LaTeX
-        </button>
-      </div>
-
-      {view === 'pdf' ? (
-        <div className={styles.panelPdfScroll}>
-          <PdfPage data={data} pageTitle={title} />
-        </div>
-      ) : (
-        <div className={styles.panelTexWrap}>
-          <TexFileTab texFile={data?.texFile} />
-          <div className={styles.panelTexEditor}>
-            <TexEditor content={texContent} onChange={setTexContent} />
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -522,13 +434,6 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
   const result = stage?.result;
   const file   = result?.file;
 
-  const paperData  = selected === 'paper'
-    ? result?.stageData as PaperResultData | undefined
-    : undefined;
-  const paperTitle = result?.title ?? 'Temporal Correlation Between Atmospheric CO₂ and Surface Temperature Anomalies';
-
-  const showFullView = selected === 'paper' && !!result && panelWidth >= PANEL_FULL;
-
   const stageStatuses = Object.fromEntries(
     STAGE_ORDER.map(sid => [sid, pipeline.stages[sid]?.status ?? 'locked'])
   ) as Record<StageId, StageStatus>;
@@ -555,7 +460,7 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
               selected={selected}
               onChange={setSelected}
             />
-            {!showFullView && backendId && file && (
+            {backendId && file && (
               <a
                 className={styles.panelDownloadBtn}
                 href={api.fileUrl(backendId, file)}
@@ -568,20 +473,14 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
           </div>
 
           {/* Content */}
-          {showFullView ? (
-            <PaperPanelView data={paperData} title={paperTitle} />
-          ) : (
-            <>
-              <div className={styles.panelDividerLine} />
-              <div className={styles.panelContent}>
-                {result ? (
-                  <PanelReadingView stageId={selected} />
-                ) : (
-                  <EmptyState status={stage?.status ?? 'locked'} />
-                )}
-              </div>
-            </>
-          )}
+          <div className={styles.panelDividerLine} />
+          <div className={styles.panelContent}>
+            {result ? (
+              <PanelReadingView stageId={selected} />
+            ) : (
+              <EmptyState status={stage?.status ?? 'locked'} />
+            )}
+          </div>
         </div>
       </aside>
     </div>

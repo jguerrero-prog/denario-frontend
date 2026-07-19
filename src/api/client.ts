@@ -79,6 +79,21 @@ export const api = {
     });
   },
 
+  async uploadFiles(projectId: string, files: File[]): Promise<BackendProject> {
+    const formData = new FormData();
+    for (const file of files) formData.append('files', file);
+    // No Content-Type header here — the browser sets the multipart boundary itself.
+    const res = await fetch(`${V1}/projects/${projectId}/files`, {
+      method: 'POST',
+      body: formData,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => res.statusText);
+      throw new Error(`${res.status} /projects/${projectId}/files: ${text}`);
+    }
+    return res.json() as Promise<BackendProject>;
+  },
+
   // ── Stage endpoints ──────────────────────────────────────────────────────────
 
   async healthCheck(): Promise<void> {
@@ -95,20 +110,24 @@ export const api = {
       track?:             'fast' | 'cmbagent';
       journal?:           string;
       writer?:            string;
+      add_citations?:     boolean;
       n_keywords?:        number;
+      kw_type?:           string;
       openai_api_key?:    string;
       anthropic_api_key?: string;
       google_api_key?:    string;
     } = {},
   ): Promise<{ project_id: string; stage_id: string; status: StageStatus }> {
-    const { track, journal, writer, n_keywords, ...apiKeys } = options;
+    const { track, journal, writer, add_citations, n_keywords, kw_type, ...apiKeys } = options;
     return req(`/projects/${projectId}/stages/${stageId}/run`, {
       method: 'POST',
       body: JSON.stringify({
-        track:      track      ?? 'fast',
-        journal:    journal    ?? 'NONE',
-        writer:     writer     ?? 'scientist',
-        n_keywords: n_keywords ?? 5,
+        track:         track         ?? 'fast',
+        journal:       journal       ?? 'NONE',
+        writer:        writer        ?? 'scientist',
+        add_citations: add_citations ?? true,
+        n_keywords:    n_keywords    ?? 5,
+        kw_type:       kw_type       ?? 'unesco',
         ...apiKeys,
       }),
     });
@@ -135,8 +154,9 @@ export const api = {
 
   // ── File URLs ────────────────────────────────────────────────────────────────
 
-  fileUrl(projectId: string, filePath: string): string {
-    return `${V1}/projects/${projectId}/files/${filePath}`;
+  fileUrl(projectId: string, filePath: string, cacheBust?: number): string {
+    const base = `${V1}/projects/${projectId}/files/${filePath}`;
+    return cacheBust ? `${base}?t=${cacheBust}` : base;
   },
 
   // ── SSE stream ───────────────────────────────────────────────────────────────

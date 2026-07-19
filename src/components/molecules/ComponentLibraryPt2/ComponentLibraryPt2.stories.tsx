@@ -55,13 +55,13 @@ export const Default: Story = {
     await expect(canvas.getAllByText('Open PDF →').length).toBeGreaterThanOrEqual(1);
 
     // 05 Literature review card
-    await expect(canvas.getByText('literature_review.md')).toBeVisible();
+    await expect(canvas.getByText('literature.md')).toBeVisible();
     await expect(canvas.getByText('4 high-overlap papers')).toBeVisible();
     await expect(canvas.getByText('High-Overlap Studies')).toBeVisible();
     await expect(canvas.getByText('Nature Climate')).toBeVisible();
 
     // 06 Referee report card
-    await expect(canvas.getByText('referee_report.md')).toBeVisible();
+    await expect(canvas.getByText('referee.md')).toBeVisible();
     await expect(canvas.getAllByText('Major Revision').length).toBeGreaterThanOrEqual(1);
     await expect(canvas.getByText('Reviewer Comments')).toBeVisible();
     await expect(canvas.getByText('#RC1')).toBeVisible();

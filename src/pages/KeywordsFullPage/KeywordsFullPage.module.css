@@ -1,0 +1,207 @@
+/* ── Layout ── */
+
+.layout {
+  display: flex;
+  flex-direction: row;
+  height: 100vh;
+  background: var(--color-bg-app);
+  overflow: hidden;
+}
+
+.main {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Top bar ── */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--color-border-def);
+  flex-shrink: 0;
+  background: var(--color-bg-app);
+}
+
+.backLink {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+
+.backLink:hover { color: var(--color-text-pri); }
+
+.backChevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--color-text-sec);
+  padding: 0;
+  transition: color 0.12s;
+}
+
+.iconBtn:hover { background: #F4F4F4; color: var(--color-text-pri); }
+
+/* ── Scroll area ── */
+
+.scrollArea {
+  flex: 1 1 0;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.document {
+  width: 100%;
+  max-width: 720px;
+  padding: 60px 0 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* ── Document header ── */
+
+.docHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+}
+
+.eyebrowActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.docTitle {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  line-height: 1.25;
+  margin: 0;
+}
+
+.divider {
+  height: 1px;
+  width: 100%;
+  background: var(--color-border-def);
+  flex-shrink: 0;
+}
+
+/* ── Sections ── */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionLabel {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  margin: 0;
+}
+
+.prose {
+  font-family: var(--font-heading);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--color-text-pri);
+  line-height: 1.75;
+}
+
+/* Real, unabridged keywords.md. No markdown renderer exists in this app yet —
+   pre-wrap keeps it fully readable as source rather than fabricating a
+   formatted view. */
+.fullDocument {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--color-text-pri);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+/* ── Keyword chips ── */
+
+.kwChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.kwChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: var(--color-bg-active);
+  border: 1px solid var(--color-border-str);
+  border-radius: 999px;
+}
+
+.kwChipText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-brand);
+  line-height: 1.3;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.kwChipText:hover {
+  text-decoration: underline;
+}
+
+/* ── End footer ── */
+
+.endFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.endLabel {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--color-text-sec);
+  text-align: center;
+}

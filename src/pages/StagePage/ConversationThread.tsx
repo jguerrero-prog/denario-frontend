@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { startStage, stopStage } from '../../utils/stageRunner';
 import { StageResultCard } from './ResultCards/ResultCards';
+import { STAGE_ORDER, STAGE_CONFIG } from '../../config/stageConfig';
+import { ParamSelect, ParamToggle, ParamNumber } from '../../components/molecules/ParamControls/ParamControls';
 import type { Message, StageId } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
@@ -71,12 +74,12 @@ function InputBubble({ message }: { message: Message }) {
           Preferred tools: {pipeline.preferredTools}
         </p>
       )}
-      {pipeline?.inputFile && (
-        <div className={styles.fileChipInline}>
+      {pipeline?.inputFiles?.map(f => (
+        <div key={f.name} className={styles.fileChipInline}>
           <div className={styles.greenDot} />
-          <span className={styles.fileChipMono}>{pipeline.inputFile.name}</span>
+          <span className={styles.fileChipMono}>{f.name}</span>
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -134,11 +137,18 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
 }
 
 const TRACK_STAGES = new Set<StageId>(['idea', 'methods']);
-// Stages whose entry point is a button on the previous stage's result card — no prompt button needed.
-const NO_PROMPT_BUTTON_STAGES = new Set<StageId>(['analysis']);
+// Analysis normally auto-starts the instant the previous stage (Methods) is
+// approved (see ResultCards.tsx's handleApprove) — but that's a one-shot
+// trigger tied to the approval click. If Analysis ever ends up back at
+// 'idle' without that click happening again (backend restart mid-run, the
+// Stop action, a crash-loop cutoff), there must still be a way to start it
+// from its own card — so it always gets a prompt button too, same as every
+// other stage.
+const NO_PROMPT_BUTTON_STAGES = new Set<StageId>([]);
 
 function StagePromptBubble({ message }: { message: Message }) {
   const setStageTrack = usePipelineStore(s => s.setStageTrack);
+  const setStageParam = usePipelineStore(s => s.setStageParam);
   const addMessage = usePipelineStore(s => s.addMessage);
   const pipeline = usePipelineStore(s => s.pipeline);
   const stageId = message.stageId!;
@@ -148,6 +158,18 @@ function StagePromptBubble({ message }: { message: Message }) {
 
   // If stage already has a track chosen, don't show buttons
   const isDecided = stage?.track !== undefined;
+
+  // Paper is the only stage with a journal/publication-style paramField today.
+  const journalField = STAGE_CONFIG[stageId as StageId].paramFields.find(f => f.key === 'journal');
+  const journalValue = (stage?.params?.journal as string | undefined) ?? (journalField?.default as string) ?? 'NONE';
+  const citationsField = STAGE_CONFIG[stageId as StageId].paramFields.find(f => f.key === 'add_citations');
+  const citationsValue = (stage?.params?.add_citations as boolean | undefined) ?? (citationsField?.default as boolean) ?? true;
+
+  // Keywords is the only stage with kw_type/num_keywords paramFields today.
+  const kwTypeField = STAGE_CONFIG[stageId as StageId].paramFields.find(f => f.key === 'kw_type');
+  const kwTypeValue = (stage?.params?.kw_type as string | undefined) ?? (kwTypeField?.default as string) ?? 'unesco';
+  const numKeywordsField = STAGE_CONFIG[stageId as StageId].paramFields.find(f => f.key === 'num_keywords');
+  const numKeywordsValue = (stage?.params?.num_keywords as number | undefined) ?? (numKeywordsField?.default as number) ?? 10;
 
   function choose(track: 'standard' | 'rigorous') {
     setStageTrack(stageId, track);
@@ -166,6 +188,46 @@ function StagePromptBubble({ message }: { message: Message }) {
     <DenarioBubble message={message}>
       {!isDecided && hasPromptButton && (
         <div className={styles.aiActions}>
+          {journalField && (
+            <div className={styles.journalRow}>
+              <span className={styles.journalLabel}>{journalField.label}</span>
+              <ParamSelect
+                value={journalValue}
+                options={journalField.options ?? []}
+                onChange={(v) => setStageParam(stageId, 'journal', v)}
+              />
+            </div>
+          )}
+          {citationsField && (
+            <div className={styles.journalRow}>
+              <span className={styles.journalLabel}>{citationsField.label}</span>
+              <ParamToggle
+                value={citationsValue}
+                onChange={(v) => setStageParam(stageId, 'add_citations', v)}
+              />
+            </div>
+          )}
+          {kwTypeField && (
+            <div className={styles.journalRow}>
+              <span className={styles.journalLabel}>{kwTypeField.label}</span>
+              <ParamSelect
+                value={kwTypeValue}
+                options={kwTypeField.options ?? []}
+                onChange={(v) => setStageParam(stageId, 'kw_type', v)}
+              />
+            </div>
+          )}
+          {numKeywordsField && (
+            <div className={styles.journalRow}>
+              <span className={styles.journalLabel}>{numKeywordsField.label}</span>
+              <ParamNumber
+                value={numKeywordsValue}
+                min={numKeywordsField.min}
+                max={numKeywordsField.max}
+                onChange={(v) => setStageParam(stageId, 'num_keywords', v)}
+              />
+            </div>
+          )}
           {hasTrackChoice ? (
             <>
               <div className={styles.aiActionRow}>
@@ -266,22 +328,126 @@ function ArrowUpIcon() {
   );
 }
 
+// ── Compose bar popovers ("/" commands, "@" stage mentions) ────────────────────
+// Command list is placeholder scaffolding only — real capabilities aren't scoped
+// yet, see /Denario/COMPOSE_BAR_TICKETS.md (currently paused). The "@" stage list
+// is real, live pipeline data — that part isn't hypothetical.
+
+const SLASH_COMMANDS = ['Command 1', 'Command 2', 'Command 3', 'Command 4', 'Command 5', 'Command 6'];
+
+interface PopoverItem {
+  key: string;
+  label: string;
+  meta?: string;
+  active?: boolean;
+  disabled?: boolean;
+}
+
+function ComposeBarPopover({
+  anchorRect, header, footer, items, highlightIndex, onHover, onSelect,
+}: {
+  anchorRect: DOMRect;
+  header: string;
+  footer: string;
+  items: PopoverItem[];
+  highlightIndex: number;
+  onHover: (i: number) => void;
+  onSelect: (item: PopoverItem) => void;
+}) {
+  return createPortal(
+    <div
+      className={styles.composePopover}
+      style={{ left: anchorRect.left, width: anchorRect.width, bottom: window.innerHeight - anchorRect.top + 8 }}
+    >
+      <div className={styles.composePopoverHeader}>{header}</div>
+      <div className={styles.composePopoverList}>
+        {items.length === 0 ? (
+          <div className={styles.composePopoverEmpty}>No matches</div>
+        ) : items.map((item, i) => (
+          <div
+            key={item.key}
+            className={[
+              styles.composePopoverRow,
+              i === highlightIndex ? styles.composePopoverRowActive : '',
+              item.disabled ? styles.composePopoverRowDisabled : '',
+            ].join(' ').trim()}
+            onMouseEnter={() => onHover(i)}
+            onMouseDown={e => { e.preventDefault(); onSelect(item); }}
+          >
+            <span className={styles.composePopoverRowLabel}>
+              {item.active && <span className={styles.composePopoverDot} />}
+              {item.label}
+            </span>
+            {item.meta && <span className={styles.composePopoverRowMeta}>{item.meta}</span>}
+          </div>
+        ))}
+      </div>
+      <div className={styles.composePopoverFooter}>{footer}</div>
+    </div>,
+    document.body,
+  );
+}
+
 function ComposeBar({ stageId }: { stageId: StageId }) {
   const [text, setText] = useState('');
   const addMessage = usePipelineStore(s => s.addMessage);
   const pipeline = usePipelineStore(s => s.pipeline);
   const stage = pipeline?.stages[stageId];
   const isRunning = stage?.status === 'running';
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
+  const [highlightIndex, setHighlightIndex] = useState(0);
+  const [dismissed, setDismissed] = useState(false);
 
   const placeholder = stage?.status === 'complete'
     ? 'Ask Denario to refine or discuss the results…'
     : 'Ask Denario anything or add more context…';
+
+  const trigger: '/' | '@' | null = text.startsWith('/') ? '/' : text.startsWith('@') ? '@' : null;
+  const query = trigger ? text.slice(1).toLowerCase() : '';
+
+  const items: PopoverItem[] = trigger === '/'
+    ? SLASH_COMMANDS
+        .map((label, i) => ({ key: `cmd-${i}`, label }))
+        .filter(item => item.label.toLowerCase().includes(query))
+    : trigger === '@'
+    ? STAGE_ORDER
+        .map(id => {
+          const isCurrent = id === stageId;
+          const status = isCurrent ? 'active' : (pipeline?.stages[id]?.status ?? 'locked');
+          return { key: id, label: STAGE_CONFIG[id].label, meta: status, active: isCurrent, disabled: status === 'locked' };
+        })
+        .filter(item => item.label.toLowerCase().includes(query))
+    : [];
+
+  useEffect(() => { setHighlightIndex(0); }, [trigger, query]);
+  useEffect(() => { setDismissed(false); }, [trigger]);
+  useEffect(() => {
+    setAnchorRect(trigger && inputRef.current ? inputRef.current.getBoundingClientRect() : null);
+  }, [trigger]);
+
+  function selectItem(item: PopoverItem) {
+    if (item.disabled) return;
+    setText(`${trigger}${item.label} `);
+    setDismissed(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }
 
   function submit() {
     const trimmed = text.trim();
     if (!trimmed) return;
     addMessage({ role: 'user', type: 'text', content: trimmed, stageId });
     setText('');
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (trigger && !dismissed && items.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setHighlightIndex(i => (i + 1) % items.length); return; }
+      if (e.key === 'ArrowUp')   { e.preventDefault(); setHighlightIndex(i => (i - 1 + items.length) % items.length); return; }
+      if (e.key === 'Enter')     { e.preventDefault(); selectItem(items[highlightIndex]); return; }
+      if (e.key === 'Escape')    { e.preventDefault(); setText(''); return; }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) submit();
   }
 
   return (
@@ -301,16 +467,29 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
       <div className={styles.composeBar}>
         <span className={styles.composeClip}><PaperclipIcon /></span>
         <input
+          ref={inputRef}
           className={styles.composeInput}
           value={text}
           onChange={e => setText(e.target.value)}
+          onBlur={() => setDismissed(true)}
           placeholder={placeholder}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && submit()}
+          onKeyDown={handleKeyDown}
         />
         <button className={styles.sendBtn} onClick={submit} aria-label="Send">
           <ArrowUpIcon />
         </button>
       </div>
+      )}
+      {trigger && !dismissed && anchorRect && (
+        <ComposeBarPopover
+          anchorRect={anchorRect}
+          header={trigger === '/' ? 'Insert artifact or tool' : 'Insert block reference'}
+          footer={trigger === '/' ? 'Use ↑↓ to navigate, ↵ to select' : 'Stages automatically lock as prerequisites'}
+          items={items}
+          highlightIndex={highlightIndex}
+          onHover={setHighlightIndex}
+          onSelect={selectItem}
+        />
       )}
     </div>
   );

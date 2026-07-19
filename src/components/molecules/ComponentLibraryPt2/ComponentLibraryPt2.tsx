@@ -287,10 +287,10 @@ const suggestions = [
 function LiteratureCard() {
   return (
     <ArtifactCard
-      specimenLabel="literature-card · Stage 6 · literature_review.md"
+      specimenLabel="literature-card · Stage 6 · literature.md"
       footerNote="Generated after Stage 6 database scan. Overlap chips replace novelty score. Paper rows sorted by relevance. Suggestion rows are actionable."
     >
-      <CardHeader filename="literature_review.md" source="Scanned 23 papers" timestamp="Just now" />
+      <CardHeader filename="literature.md" source="Scanned 23 papers" timestamp="Just now" />
       <div className={styles.overlapSummary}>
         <div className={styles.overlapItem}>
           <span className={`${styles.overlapDot} ${styles.overlapDotAmber}`} />
@@ -360,10 +360,10 @@ const comments = [
 function RefereeCard() {
   return (
     <ArtifactCard
-      specimenLabel="referee-card · Stage 7 · referee_report.md"
+      specimenLabel="referee-card · Stage 7 · referee.md"
       footerNote="Simulated peer review output. Verdict row surfaces recommendation. Comment cards use severity dot system. Each comment has direct action."
     >
-      <CardHeader filename="referee_report.md" source="Simulated · NeurIPS reviewer" timestamp="Just now" />
+      <CardHeader filename="referee.md" source="Simulated · NeurIPS reviewer" timestamp="Just now" />
       <div className={styles.verdictRow}>
         <div className={styles.verdictLeft}>
           <p className={styles.verdictHeading}>Recommendation</p>

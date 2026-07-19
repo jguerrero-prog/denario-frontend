@@ -11,8 +11,11 @@ import type {
   AnalysisResultData,
   PaperResultData,
   LiteratureResultData,
+  StructuredLiteratureReview,
   RefereeResultData,
+  StructuredRefereeReport,
   KeywordsResultData,
+  StructuredKeywords,
 } from '../types/pipeline';
 
 // ── Markdown helpers ──────────────────────────────────────────────────────────
@@ -33,7 +36,10 @@ function extractSection(md: string, ...headings: string[]): string | null {
 
 function firstParagraph(md: string): string | null {
   return (
-    md.split(/\n{2,}/).find(p => p.trim().length > 80 && !p.startsWith('#')) ?? null
+    md.split(/\n{2,}/).find(p => {
+      const t = p.trim();
+      return t.length > 80 && !t.startsWith('#') && !t.startsWith('>');
+    }) ?? null
   );
 }
 
@@ -137,7 +143,11 @@ function parseMethods(
   };
 }
 
-function parseAnalysis(content: string, mock: StageResult): Partial<StageResult> {
+function parseAnalysis(
+  content: string,
+  mock: StageResult,
+  structured?: Record<string, unknown> | null,
+): Partial<StageResult> {
   const mockData = mock.stageData as AnalysisResultData;
 
   const pearsonR    = content.match(/Pearson\s+r\s*[=:≈]\s*([\d.]+)/i)?.[1];
@@ -167,6 +177,13 @@ function parseAnalysis(content: string, mock: StageResult): Partial<StageResult>
   if (pValue) tags.push(`p ${pValue}`);
   if (plots.length > 0) tags.push(`${plots.length} plots`);
 
+  // structured (results.json, dynamically parsed by denario/results_parser.py
+  // from the real markdown — not schema-constrained generation like Methods,
+  // see structured_results.py's docstring) is the richer source when present;
+  // the regex fields above stay as a fallback for projects generated before
+  // this parser existed, so older results still render something reasonable.
+  const parsedStructured = (structured as unknown as AnalysisResultData['structured']) ?? null;
+
   const stageData: AnalysisResultData = {
     ...mockData,
     narrativeFindings: narrative ?? '',
@@ -174,11 +191,17 @@ function parseAnalysis(content: string, mock: StageResult): Partial<StageResult>
     totalPlots: plots.length,
     selfHeals: selfHealMatch ? parseInt(selfHealMatch[1]) : 0,
     statsGrid,
+    structured: parsedStructured,
   };
 
   return {
-    title: extractTitle(content) ?? undefined,
-    content: narrative ?? content.slice(0, 400),
+    title: parsedStructured?.title ?? extractTitle(content) ?? undefined,
+    content: parsedStructured?.summary || narrative || content.slice(0, 400),
+    // Analysis's real output is a full long-form report (headers, tables,
+    // a references section). `structured` (above) is preferred for
+    // rendering when present; `rawContent` remains as a plain-text fallback
+    // for older projects with no results.json sidecar yet.
+    rawContent: content,
     tags,
     stats: {
       ...(r2        ? { 'R²': r2 }           : {}),
@@ -192,137 +215,112 @@ function parseAnalysis(content: string, mock: StageResult): Partial<StageResult>
 function parsePaper(content: string, mock: StageResult): Partial<StageResult> {
   const mockData = mock.stageData as PaperResultData;
 
+  // denario/api/runner.py hardcodes add_citations=False for the API path
+  // today, so `citations` will realistically be 0 for now — that's accurate,
+  // not a bug, and the UI should show it as such rather than padding with a
+  // mock count. See DenarioBackend api/runner.py's paper branch.
   const abstractMatch = content.match(
     /\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/
   );
   const abstract = abstractMatch
     ? abstractMatch[1].replace(/%[^\n]*/g, '').trim()
-    : mockData.abstract;
+    : '';
 
   // Count unique \cite{...} keys
   const citeKeys = new Set(
     [...content.matchAll(/\\cite(?:\[[^\]]*\])?\{([^}]+)\}/g)]
       .flatMap(m => m[1].split(',').map(k => k.trim()))
   );
-  const citations = citeKeys.size > 0 ? citeKeys.size : mockData.citations;
+  const citations = citeKeys.size;
 
   // Strip LaTeX for plain title
   const rawTitle = extractTitle(content.replace(/\\[a-z]+\{([^}]*)\}/gi, '$1'));
 
   const stageData: PaperResultData = {
     ...mockData,
-    abstract: abstract ?? mockData.abstract,
+    abstract,
     citations,
   };
 
   return {
     title: rawTitle ?? undefined,
-    content: abstract ?? undefined,
-    tags: ['LaTeX', `${citations} citations`],
+    content: abstract || content.slice(0, 400),
+    // The real, unabridged manuscript.tex — no schema exists for LaTeX the
+    // way Methods/Analysis have one, so the full page renders this directly
+    // rather than the fabricated mock PDF/tex preview it used to show.
+    rawContent: content,
+    tags: citations > 0 ? ['LaTeX', `${citations} citations`] : ['LaTeX'],
     stageData,
   };
 }
 
-function parseLiterature(content: string, mock: StageResult): Partial<StageResult> {
-  const mockData = mock.stageData as LiteratureResultData;
+function parseLiterature(content: string, structured?: Record<string, unknown> | null): Partial<StageResult> {
+  // structured (literature.json, written by DenarioBackend's
+  // literature_parser.py) is the richer source when present — real
+  // decision/papers/conclusion instead of a regex teaser. Older projects
+  // generated before the sidecar existed simply have no `structured`, and
+  // the full page falls back to raw markdown (see LiteratureFullPage.tsx).
+  const parsedStructured = (structured as unknown as StructuredLiteratureReview | undefined) ?? null;
 
-  // Count numbered list items as papers
-  const numbered = content.split('\n').filter(l => /^\d+\./.test(l.trim()));
-  const totalScanned = numbered.length > 0 ? numbered.length : mockData.totalScanned;
+  const stageData: LiteratureResultData = { kind: 'literature', structured: parsedStructured };
 
-  // Extract studies with overlap percentages: "94% — Title (venue)"
-  const studyRe = /(\d+)%\s*[—–-]\s*(.+?)(?:\((.+?)\))?$/gm;
-  const highOverlapStudies: LiteratureResultData['highOverlapStudies'] = [];
-  let m: RegExpExecArray | null;
-  while ((m = studyRe.exec(content)) !== null && highOverlapStudies.length < 6) {
-    highOverlapStudies.push({
-      pct: `${m[1]}%`,
-      title: m[2].trim(),
-      venue: m[3]?.trim() ?? '',
-    });
-  }
-
-  const stageData: LiteratureResultData = {
-    ...mockData,
-    totalScanned,
-    highOverlapStudies:
-      highOverlapStudies.length > 0 ? highOverlapStudies : mockData.highOverlapStudies,
-  };
+  const tags: string[] = [];
+  if (parsedStructured?.decision) tags.push(parsedStructured.decision);
+  if (parsedStructured?.papers.length) tags.push(`${parsedStructured.papers.length} papers compared`);
 
   return {
     title: extractTitle(content) ?? undefined,
-    content: firstParagraph(content) ?? undefined,
-    tags: totalScanned > 0 ? [`${totalScanned} papers`] : [],
+    content: parsedStructured?.assessment || firstParagraph(content) || undefined,
+    // Real, unabridged literature_review.md — no fabricated overlap stats or
+    // invented paper matches, just what the backend actually generated.
+    rawContent: content,
+    tags,
     stageData,
   };
 }
 
-function parseReferee(content: string, mock: StageResult): Partial<StageResult> {
-  const mockData = mock.stageData as RefereeResultData;
+function parseReferee(content: string, structured?: Record<string, unknown> | null): Partial<StageResult> {
+  // structured (referee.json, written by DenarioBackend's referee_parser.py)
+  // is the richer source when present — real score/sections instead of a
+  // regex teaser. Older projects generated before the sidecar existed
+  // simply have no `structured`, and the full page falls back to raw
+  // markdown (see RefereeFullPage.tsx).
+  const parsedStructured = (structured as unknown as StructuredRefereeReport | undefined) ?? null;
 
-  const verdictText =
-    extractSection(content, 'Verdict', 'Recommendation', 'Summary') ??
-    mockData.verdict.recommendation;
+  const stageData: RefereeResultData = { kind: 'referee', structured: parsedStructured };
 
-  // Determine verdict chip from text
-  let chip = 'Revision Required';
-  const lower = verdictText.toLowerCase();
-  if (lower.includes('accept') && !lower.includes('major')) chip = 'Minor Revision';
-  else if (lower.includes('major')) chip = 'Major Revision';
-  else if (lower.includes('reject')) chip = 'Reject';
+  const tags: string[] = [];
+  if (parsedStructured?.score) tags.push(`Score: ${parsedStructured.score}`);
 
-  // Extract reviewer sections: "## Reviewer A / Reviewer 1 / RC1"
-  const reviewerRe =
-    /##\s+(?:Reviewer\s+([A-Z\d]+)|#?(RC\d+))\s*\n([\s\S]*?)(?=\n##|$)/gi;
-  const comments: RefereeResultData['comments'] = [];
-  let m: RegExpExecArray | null;
-  while ((m = reviewerRe.exec(content)) !== null) {
-    const label = m[1] ?? m[2];
-    const body  = m[3].trim();
-    const severity = /major/i.test(body) ? 'Major' : 'Minor';
-    comments.push({
-      id: `#RC${label}`,
-      label: `${severity} · Reviewer ${label}`,
-      text: body,
-      action: 'Address in manuscript →',
-    });
-  }
-
-  const stageData: RefereeResultData = {
-    ...mockData,
-    verdict: { recommendation: verdictText, chip },
-    comments: comments.length > 0 ? comments : mockData.comments,
-  };
+  const overallSection = parsedStructured?.sections.find(s => /overall|assessment|summary/i.test(s.title));
 
   return {
     title: extractTitle(content) ?? undefined,
-    content: verdictText,
+    content: overallSection?.body || firstParagraph(content) || undefined,
+    // Real, unabridged referee.md — no fabricated verdict chip or invented
+    // per-reviewer comment cards, just what the backend actually generated.
+    rawContent: content,
+    tags,
     stageData,
   };
 }
 
-function parseKeywords(content: string, mock: StageResult): Partial<StageResult> {
-  const mockData = mock.stageData as KeywordsResultData;
+function parseKeywords(content: string, structured?: Record<string, unknown> | null): Partial<StageResult> {
+  // structured (keywords.json, written by DenarioBackend's
+  // keywords_parser.py) is the source of truth when present — keywords.md's
+  // format is deterministic (see structured_keywords.py's docstring), so
+  // there's no fabricated fallback grouping the way other stages have one.
+  const parsedStructured = (structured as unknown as StructuredKeywords | undefined) ?? null;
 
-  // Each "## Heading" section → keyword group
-  const sectionRe = /##\s+(.+?)\s*\n([\s\S]*?)(?=\n##|$)/gi;
-  const groups: KeywordsResultData['groups'] = [];
-  let m: RegExpExecArray | null;
-  while ((m = sectionRe.exec(content)) !== null) {
-    const terms = (m[2].match(/[-*]\s+(.+)/g) ?? []).map(t =>
-      t.replace(/^[-*]\s+/, '').trim()
-    );
-    if (terms.length > 0) groups.push({ heading: m[1].trim(), terms });
-  }
+  const stageData: KeywordsResultData = { kind: 'keywords', structured: parsedStructured };
 
-  const stageData: KeywordsResultData = {
-    ...mockData,
-    groups: groups.length > 0 ? groups : mockData.groups,
-  };
+  const count = parsedStructured?.keywords.length ?? 0;
 
   return {
     title: extractTitle(content) ?? undefined,
-    content: undefined,
+    content: parsedStructured?.keywords.map(k => k.term).join(', ') || undefined,
+    rawContent: content,
+    tags: count > 0 ? [`${count} keywords`] : [],
     stageData,
   };
 }
@@ -355,11 +353,11 @@ export function parseBackendResult(
     switch (stageId) {
       case 'idea':       parsed = parseIdea(rawContent, mock);       break;
       case 'methods':    parsed = parseMethods(rawContent, mock, structured); break;
-      case 'analysis':   parsed = parseAnalysis(rawContent, mock);   break;
+      case 'analysis':   parsed = parseAnalysis(rawContent, mock, structured); break;
       case 'paper':      parsed = parsePaper(rawContent, mock);      break;
-      case 'literature': parsed = parseLiterature(rawContent, mock); break;
-      case 'referee':    parsed = parseReferee(rawContent, mock);    break;
-      case 'keywords':   parsed = parseKeywords(rawContent, mock);   break;
+      case 'literature': parsed = parseLiterature(rawContent, structured); break;
+      case 'referee':    parsed = parseReferee(rawContent, structured); break;
+      case 'keywords':   parsed = parseKeywords(rawContent, structured); break;
     }
   } catch {
     // leave parsed empty — spread over mock below

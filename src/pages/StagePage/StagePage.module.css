@@ -281,6 +281,20 @@
   color: var(--color-text-mut);
 }
 
+.journalRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.journalLabel {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--color-text-sec);
+  white-space: nowrap;
+}
+
 /* ── Suggestion follow-up action ── */
 
 .suggestionFollowupActions {
@@ -526,6 +540,98 @@
 
 .sendBtn:hover {
   background: var(--color-brand-dark);
+}
+
+/* ── Compose bar "/" and "@" popovers (portalled to document.body) ── */
+
+.composePopover {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-def);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-floating);
+  overflow: hidden;
+  z-index: 1000;
+  max-height: 340px;
+}
+
+.composePopoverHeader {
+  padding: var(--space-2) 16px 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--color-text-mut);
+}
+
+.composePopoverList {
+  overflow-y: auto;
+  padding: 0 var(--space-2) var(--space-2);
+}
+
+.composePopoverEmpty {
+  padding: 12px 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--color-text-mut);
+}
+
+.composePopoverRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.composePopoverRowActive {
+  background: var(--color-bg-active);
+}
+
+.composePopoverRowDisabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.composePopoverRowLabel {
+  display: flex;
+  align-items: center;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--color-text-pri);
+}
+
+.composePopoverRowActive .composePopoverRowLabel {
+  color: var(--color-brand);
+  font-weight: 500;
+}
+
+.composePopoverDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.composePopoverRowMeta {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--color-text-decorative);
+}
+
+.composePopoverFooter {
+  padding: 8px 16px;
+  border-top: 1px solid var(--color-border-def);
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-mut);
 }
 
 /* ══════════════════════════════════════════════
@@ -1014,149 +1120,7 @@
   color: var(--color-text-sec);
 }
 
-/* Literature */
-
-.readingOverlapRow {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.readingOverlapAmber {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
-  color: #B45309;
-}
-
-.readingOverlapBlue {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
-  color: #1D4ED8;
-}
-
-.readingOverlapRed {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 500;
-  color: #B91C1C;
-}
-
-.readingStudyList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.readingStudyItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.readingStudyPct {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  color: #B45309;
-  flex-shrink: 0;
-  padding-top: 1px;
-}
-
-.readingStudyInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.readingStudyTitle {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--color-text-pri);
-  line-height: 1.4;
-}
-
-.readingStudyVenue {
-  font-family: var(--font-body);
-  font-size: 10px;
-  color: var(--color-text-mut);
-}
-
-/* Referee */
-
-.readingVerdictRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.readingVerdictChip {
-  flex-shrink: 0;
-  padding: 3px 8px;
-  border-radius: 4px;
-  background: #FEF3C7;
-  border: 1px solid #FDE68A;
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 600;
-  color: #B45309;
-  white-space: nowrap;
-}
-
-.readingCommentList {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.readingCommentItem {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  background: var(--color-bg-app);
-  border-radius: 6px;
-  border: 1px solid var(--color-border-def);
-}
-
-.readingCommentHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.readingCommentLabel {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-sec);
-}
-
-.readingCommentId {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--color-text-mut);
-}
-
-.readingCommentText {
-  font-family: var(--font-body);
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--color-text-sec);
-  margin: 0;
-}
-
 /* Keywords */
-
-.readingKwGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
 
 .readingKwChips {
   display: flex;
@@ -1173,6 +1137,11 @@
   font-size: 11px;
   font-weight: 500;
   color: var(--color-text-sec);
+  text-decoration: none;
+}
+
+.readingKwChip:hover {
+  text-decoration: underline;
 }
 
 /* ── Embedded full view (paper stage in wide panel) ── */

@@ -4,13 +4,15 @@ import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
 import { parseBackendResult } from '../utils/parsers';
+import { buildMockResult } from '../utils/stageRunner';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
   backendProjectId: string | null;   // UUID assigned by the FastAPI server
 
   // Pipeline lifecycle
-  createPipeline: (inputText: string, inputFile?: InputFile, track?: Track) => string; // returns new project id
+  createPipeline: (inputText: string, inputFiles?: InputFile[], track?: Track) => string; // returns new project id
+  createModularPipeline: (targetStage: StageId, inputText: string, inputFiles?: InputFile[], track?: Track) => string; // Modular jump-to-stage entry from Homepage; returns new project id
   hydratePipeline: (backendProject: BackendProject) => string;           // load existing backend project; returns frontend id
   setPipeline: (pipeline: Pipeline) => void;
   clearPipeline: () => void;
@@ -26,6 +28,7 @@ interface PipelineStore {
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
   unlockNextStage: (stageId: StageId) => void;  // like approveStage, but adds no conversation messages
   setActiveStage: (stageId: StageId) => void;
+  ensureStagePrompt: (stageId: StageId) => void;  // Modular jump to a never-reached stage: insert its stage-prompt on demand; no-op if the stage already has any messages
 
   // Conversation
   addMessage: (msg: Omit<Message, 'id' | 'timestamp'>) => string; // returns generated id
@@ -35,7 +38,7 @@ interface PipelineStore {
 
 // ── Pipeline factory ──────────────────────────────────────────────────────────
 
-function buildPipeline(id: string, inputText: string, inputFile?: InputFile, track?: Track): Pipeline {
+function buildPipeline(id: string, inputText: string, inputFiles?: InputFile[], track?: Track): Pipeline {
   const now = Date.now();
   const stages = Object.fromEntries(
     STAGE_ORDER.map((sid, idx) => [
@@ -57,7 +60,7 @@ function buildPipeline(id: string, inputText: string, inputFile?: InputFile, tra
     id,
     name: deriveProjectName(inputText),
     workspace: '~/research/',
-    inputFile,
+    inputFiles,
     inputText,
     preferredTools: '',
     mode: 'pipeline',
@@ -74,6 +77,69 @@ function buildPipeline(id: string, inputText: string, inputFile?: InputFile, tra
         timestamp: now,
       },
       // No initial stage-prompt — input stage auto-starts on page load
+    ],
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+// Modular jump-to-stage entry: unlike buildPipeline, every stage starts
+// 'idle' (not sequentially locked), and a stage-prompt message for the
+// chosen target stage is inserted directly — reusing the exact same
+// StagePromptBubble -> track choice -> startStage() mechanism that normally
+// only fires via sequential approveStage(), rather than a separate trigger.
+function buildModularPipeline(
+  id: string,
+  targetStage: StageId,
+  inputText: string,
+  inputFiles?: InputFile[],
+  track?: Track,
+): Pipeline {
+  const now = Date.now();
+  const stages = Object.fromEntries(
+    STAGE_ORDER.map((sid) => [
+      sid,
+      {
+        id: sid,
+        status: 'idle',
+        models: Object.fromEntries(
+          STAGE_CONFIG[sid].modelRoles.map(r => [r.key, r.default])
+        ),
+        params: Object.fromEntries(
+          STAGE_CONFIG[sid].paramFields.map(f => [f.key, f.default])
+        ),
+      } as Stage,
+    ])
+  ) as Pipeline['stages'];
+
+  return {
+    id,
+    name: deriveProjectName(inputText),
+    workspace: '~/research/',
+    inputFiles,
+    inputText,
+    preferredTools: '',
+    mode: 'modular',
+    initialTrack: track,
+    activeStageId: targetStage,
+    stages,
+    messages: [
+      {
+        id: 'msg-1',
+        role: 'user',
+        type: 'text',
+        content: inputText,
+        stageId: targetStage,
+        timestamp: now,
+      },
+      {
+        id: 'msg-2',
+        role: 'denario',
+        type: 'stage-prompt',
+        content: STAGE_CONFIG[targetStage].denarioOpener,
+        stageId: targetStage,
+        timestamp: now + 50,
+      },
     ],
     createdAt: now,
     updatedAt: now,
@@ -104,15 +170,26 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
 
   setBackendProjectId: (id) => set({ backendProjectId: id }),
 
-  createPipeline: (inputText, inputFile, track) => {
+  createPipeline: (inputText, inputFiles, track) => {
     const id = `proj-${Date.now()}`;
-    const pipeline = buildPipeline(id, inputText, inputFile, track);
+    const pipeline = buildPipeline(id, inputText, inputFiles, track);
+    set({ pipeline });
+    return id;
+  },
+
+  createModularPipeline: (targetStage, inputText, inputFiles, track) => {
+    const id = `proj-${Date.now()}`;
+    const pipeline = buildModularPipeline(id, targetStage, inputText, inputFiles, track);
     set({ pipeline });
     return id;
   },
 
   hydratePipeline: (backendProject) => {
-    const id = `proj-${Date.now()}`;
+    // Use the backend's real project id, not a synthetic one — this is what
+    // makes the URL (/project/:projectId/...) resolvable by api.getProject()
+    // on a later page refresh. A synthetic per-hydration id here would mean
+    // the URL never matches anything the backend recognizes.
+    const id = backendProject.id;
     const inputText = backendProject.stages['input']?.content ?? '';
     const pipeline = buildPipeline(id, inputText, undefined);
     const backendStatuses = backendProject.stages;
@@ -130,15 +207,18 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       const status = statusMap[bs.status] ?? 'locked';
       let result: StageResult | undefined;
       if (status === 'complete' && bs.content) {
-        const mockResult = MOCK_PIPELINE.stages[sid as StageId]?.result;
-        if (mockResult) {
-          result = parseBackendResult(sid as StageId, 'standard' as Track, bs.content, bs.duration_sec, mockResult);
-        }
+        // Every stage needs a template to seed unparsed fields, but only
+        // 'input' has a real MOCK_PIPELINE entry — buildMockResult() (already
+        // used by stageRunner.ts for the live-run path) generates one for any
+        // stage/track, so real backend content is never silently dropped here.
+        const template = buildMockResult(sid as StageId, 'standard');
+        result = parseBackendResult(sid as StageId, 'standard' as Track, bs.content, bs.duration_sec, template, bs.structured);
       }
       updatedStages[sid as StageId] = {
         ...updatedStages[sid as StageId],
         status,
         ...(result ? { result } : {}),
+        ...(status === 'error' ? { error: bs.error ?? 'An unexpected error occurred.' } : {}),
       };
     }
 
@@ -166,14 +246,19 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
         content: `Stage · ${STAGE_CONFIG[prevSid as StageId].label} complete — ${STAGE_CONFIG[sid as StageId].label} unlocked.`,
         timestamp: now,
       });
-      if (stage.status === 'complete') {
+      if (stage.status === 'complete' || stage.status === 'error') {
+        // 'error' also gets a result-card message — StageResultCard checks
+        // stage.status === 'error' first and renders the ErrorCard (with the
+        // real error text + Retry button) instead of the normal result body.
         messages.push({
           id: `msg-result-${sid}`,
           role: 'denario',
           type: 'result-card',
-          content: stage.result
-            ? `Generated in ${stage.result.durationLabel}. Review the output below.`
-            : 'Stage complete.',
+          content: stage.status === 'error'
+            ? 'Stage failed — see the error below.'
+            : stage.result
+              ? `Generated in ${stage.result.durationLabel}. Review the output below.`
+              : 'Stage complete.',
           stageId: sid as StageId,
           track: stage.result?.track,
           timestamp: now + 100,
@@ -308,6 +393,28 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     set(({ pipeline }) =>
       pipeline ? { pipeline: { ...pipeline, activeStageId: stageId } } : {}
     ),
+
+  ensureStagePrompt: (stageId) =>
+    set(({ pipeline }) => {
+      if (!pipeline) return {};
+      const alreadyReached = pipeline.messages.some(m => m.stageId === stageId);
+      if (alreadyReached) return {};
+      const message: Message = {
+        id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        role: 'denario',
+        type: 'stage-prompt',
+        content: STAGE_CONFIG[stageId].denarioOpener,
+        stageId,
+        timestamp: Date.now(),
+      };
+      return {
+        pipeline: {
+          ...pipeline,
+          messages: [...pipeline.messages, message],
+          updatedAt: Date.now(),
+        },
+      };
+    }),
 
   addMessage: (msg) => {
     const id = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;

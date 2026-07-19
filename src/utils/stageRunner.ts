@@ -24,7 +24,7 @@ const sseCleanups   = new Map<StageId, () => void>();
 
 // ── Mock results ──────────────────────────────────────────────────────────────
 
-function buildMockResult(stageId: StageId, track: Track): StageResult {
+export function buildMockResult(stageId: StageId, track: Track): StageResult {
   const standard = track === 'standard';
   const results: Record<StageId, StageResult> = {
     input: {
@@ -196,67 +196,36 @@ function buildMockResult(stageId: StageId, track: Track): StageResult {
       generatedAt: Date.now(),
       stageData: {
         kind: 'paper',
-        texFile: { name: 'manuscript.tex', size: '14.2 KB' },
-        pdfFile: { name: 'paper.pdf', size: '1.4 MB', pages: 8 },
         citations: 14,
-        journal: standard ? 'Standard' : 'NeurIPS',
         abstract: 'This study investigates the temporal correlation between atmospheric CO₂ concentration and surface temperature anomalies over a five-year observation period (2019–2024) across 23 monitoring stations…',
       } satisfies PaperResultData,
     },
     literature: {
-      stageId, track, file: 'literature_review.md',
+      stageId, track, file: 'literature.md',
       title: 'Literature Review Complete',
-      content: '23 related papers identified via Semantic Scholar. 4 directly overlapping studies noted. No prior work uses the same 23-station dataset over this exact window.',
-      tags: ['23 papers', '4 overlaps'],
+      content: 'Related work identified via Semantic Scholar.',
+      tags: [],
       durationLabel: standard ? '1 min 44 sec' : '3 min 29 sec',
       generatedAt: Date.now(),
-      stageData: {
-        kind: 'literature',
-        totalScanned: 23,
-        overlapCounts: { high: 4, gaps: 2, conflicts: 1 },
-        highOverlapStudies: [
-          { pct: '94%', title: 'Global CO₂ and Temperature Trends: A Statistical Reanalysis (2021)', venue: 'Nature Climate' },
-          { pct: '87%', title: 'Time-Series Approaches to Climate Correlation Studies', venue: 'ICML 2022' },
-          { pct: '81%', title: 'OLS Regression in Atmospheric Data: Limitations and Extensions', venue: 'arXiv' },
-          { pct: '76%', title: 'Heteroscedasticity in Climate Time-Series: A Methodological Review', venue: 'AGU 2023' },
-        ],
-        suggestions: [
-          { text: 'Add citation [1] to Introduction — supports your baseline claim.', action: 'Insert →' },
-          { text: 'Address heteroscedasticity overlap with AGU 2023 in Limitations.', action: 'Add note →' },
-        ],
-      } satisfies LiteratureResultData,
+      stageData: { kind: 'literature' } satisfies LiteratureResultData,
     },
     referee: {
-      stageId, track, file: 'referee_report.md',
+      stageId, track, file: 'referee.md',
       title: 'Referee Report Simulated',
-      content: 'Reviewer A (minor revision): spatial autocorrelation section needs elaboration. Reviewer B (accept with minor revisions): methodology is sound, discussion is thorough.',
-      tags: ['Minor revision', '2 reviewers'],
+      content: 'Two simulated peer reviewers assess the manuscript.',
+      tags: [],
       durationLabel: standard ? '2 min 03 sec' : '4 min 17 sec',
       generatedAt: Date.now(),
-      stageData: {
-        kind: 'referee',
-        verdict: { recommendation: 'Acceptance likely after addressing statistical robustness.', chip: 'Major Revision' },
-        comments: [
-          { id: '#RC1', label: 'Major · Statistical Robustness', text: 'The OLS model assumes homoscedasticity. Apply HC3-consistent standard errors or provide a Breusch-Pagan test result.', action: 'Address in manuscript →' },
-          { id: '#RC2', label: 'Major · Sample Period Justification', text: 'The 2019–2024 window should be explicitly justified and the post-COVID emissions recovery trend acknowledged.', action: 'Add justification →' },
-        ],
-      } satisfies RefereeResultData,
+      stageData: { kind: 'referee' } satisfies RefereeResultData,
     },
     keywords: {
       stageId, track, file: 'keywords.md',
       title: 'Keywords Extracted',
-      content: 'Primary: CO₂ concentration, temperature anomaly, climate correlation. Methodology: OLS regression, Pearson correlation, time-series analysis. Domain: atmospheric science, climate modelling.',
-      tags: ['6 primary', '3 methodology', '2 domain'],
+      content: 'Keywords extracted from the manuscript.',
+      tags: [],
       durationLabel: standard ? '18 sec' : '41 sec',
       generatedAt: Date.now(),
-      stageData: {
-        kind: 'keywords',
-        groups: [
-          { heading: 'Primary Keywords', terms: ['Atmospheric CO₂', 'Surface Temperature Anomaly', 'Climate Correlation', 'Time-Series Regression', 'OLS Regression', 'Pearson Correlation'] },
-          { heading: 'Methodology Terms', terms: ['statsmodels', 'pandas', 'Spearman Correlation', 'Heteroscedasticity', 'HC3 Standard Errors'] },
-          { heading: 'Domain & Index Terms', terms: ['Climate Science', 'Environmental Statistics', 'Carbon Emissions', 'Reproducible Research'] },
-        ],
-      } satisfies KeywordsResultData,
+      stageData: { kind: 'keywords' } satisfies KeywordsResultData,
     },
   };
   return results[stageId];
@@ -299,7 +268,16 @@ export async function startStage(stageId: StageId, track: Track) {
     // ── 3. Start the stage on the backend ───────────────────────────────────
     const backendTrack = track === 'standard' ? 'fast' : 'cmbagent';
     const apiKeys = useConfigStore.getState().getApiKeyPayload();
-    await api.runStage(backendId, stageId, { track: backendTrack, ...apiKeys });
+    const stageParams = usePipelineStore.getState().pipeline?.stages[stageId]?.params;
+    const journal = stageParams?.journal as string | undefined;
+    const addCitations = stageParams?.add_citations as boolean | undefined;
+    const numKeywords = stageParams?.num_keywords as number | undefined;
+    const kwType = stageParams?.kw_type as string | undefined;
+    await api.runStage(backendId, stageId, {
+      track: backendTrack, journal, add_citations: addCitations,
+      n_keywords: numKeywords, kw_type: kwType,
+      ...apiKeys,
+    });
 
     // ── 4. Open SSE stream — pipe log lines into the status message ─────────
     const cleanup = api.streamStage(

@@ -18,7 +18,7 @@ export const MOCK_PIPELINE: Pipeline = {
   id: 'demo',
   name: 'co2-temp-study',
   workspace: '~/research/co2-temp-study/',
-  inputFile: { name: 'co2_data_2019_2024.csv', size: '4.2 MB' },
+  inputFiles: [{ name: 'co2_data_2019_2024.csv', size: '4.2 MB' }],
   inputText:
     'I have a CSV file with daily atmospheric CO₂ readings (ppm) and surface temperature anomalies (°C) collected across 23 monitoring stations from 2019–2024. I want to investigate whether rising CO₂ concentrations serve as a statistically significant predictor of temperature anomalies over this 5-year observation window.',
   preferredTools: 'pandas, statsmodels, matplotlib, scipy',

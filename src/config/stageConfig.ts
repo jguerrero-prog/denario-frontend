@@ -31,7 +31,7 @@ export interface ModelGroup {
 export const MODEL_OPTIONS: ModelGroup[] = [
   { provider: 'OPENAI',    models: ['gpt-4.1', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini'] },
   { provider: 'ANTHROPIC', models: ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4'] },
-  { provider: 'GOOGLE',    models: ['gemini-2.5-pro', 'gemini-2.5-flash'] },
+  { provider: 'GOOGLE',    models: ['gemini-2.5-pro', 'gemini-3.5-flash'] },
 ];
 
 // ── Per-stage model roles ──────────────────────────────────────────────────────
@@ -42,6 +42,18 @@ export interface ModelRole {
   default: ModelConfig;
 }
 
+// Homepage "Modular" jump-to-stage entry point — the headline/subheader/CTA
+// swap when a user picks this stage directly instead of starting at Input.
+export interface ModularEntryConfig {
+  headline: string;     // e.g. "What's your hypothesis?"
+  subheader: string;    // states the artifacts this stage needs, e.g. "Given your idea and data description."
+  cta: string;           // button label, e.g. "Test Hypothesis"
+  placeholder: string;  // textarea placeholder prompting for the right content
+  requiresFile: boolean;     // true if this stage needs a real file, not just prose
+  fileHint?: string;         // shown when requiresFile — e.g. "Attach your dataset"
+  showToolPreferences: boolean;  // false for stages that operate on a manuscript, not a dataset
+}
+
 export interface StageConfigEntry {
   id: StageId;
   label: string;          // full label, e.g. 'Input Prompt'
@@ -50,6 +62,7 @@ export interface StageConfigEntry {
   modelRoles: ModelRole[];
   paramFields: ParamField[];  // stage-specific non-model config
   denarioOpener: string;  // Denario's opening message for this stage
+  modularEntry: ModularEntryConfig;
 }
 
 export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
@@ -73,6 +86,14 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     paramFields: [],
     denarioOpener:
       'Research scope captured. For a submission-quality study, Rigorous is the stronger choice — it stress-tests the hypothesis before you commit to it. Standard works for exploratory work. Which would you prefer?',
+    modularEntry: {
+      headline: 'What does your data suggest?',
+      subheader: 'Start a new pipeline, jump into a specific tool, or continue a recent project.',
+      cta: 'Begin',
+      placeholder: 'Describe your dataset, research domain, and preferred tools...',
+      requiresFile: false,
+      showToolPreferences: true,
+    },
   },
 
   idea: {
@@ -105,6 +126,14 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     denarioOpener:
       'Hypothesis locked from Stage 1. The idea_maker will generate a testable hypothesis from your dataset and the idea_hater will stress-test it. Ready to begin?',
+    modularEntry: {
+      headline: "What's your hypothesis?",
+      subheader: 'Given your data description.',
+      cta: 'Test Hypothesis',
+      placeholder: 'Describe your data and the hypothesis you want tested...',
+      requiresFile: false,
+      showToolPreferences: true,
+    },
   },
 
   methods: {
@@ -132,6 +161,14 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     paramFields: [],
     denarioOpener:
       "Hypothesis approved. The Methods sub-swarm will translate it into a concrete technical roadmap. The planner drafts, the reviewer critiques, and the method generator finalises. Select the mode below when you're ready.",
+    modularEntry: {
+      headline: "What's the plan?",
+      subheader: 'Given your idea and data description.',
+      cta: 'Plan Methods',
+      placeholder: 'Paste your idea and data description...',
+      requiresFile: false,
+      showToolPreferences: true,
+    },
   },
 
   analysis: {
@@ -154,6 +191,15 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     paramFields: [],
     denarioOpener:
       'Methods approved. The engineer will write and execute Python against your dataset in a sandboxed environment. If it hits an error, it self-heals. Ready to run the analysis?',
+    modularEntry: {
+      headline: 'What does the analysis show?',
+      subheader: 'Given your idea, methods, and data description.',
+      cta: 'Run Analysis',
+      placeholder: 'Paste your idea, methods, and data description...',
+      requiresFile: true,
+      fileHint: 'Attach your dataset',
+      showToolPreferences: true,
+    },
   },
 
   paper: {
@@ -215,13 +261,21 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     denarioOpener:
       'Analysis complete. Ready to draft the manuscript. Which journal format should I target, and what is your discipline?',
+    modularEntry: {
+      headline: "What's the story your results tell?",
+      subheader: 'Given your idea, methods, and results.',
+      cta: 'Draft Manuscript',
+      placeholder: 'Paste your idea, methods, and results...',
+      requiresFile: false,
+      showToolPreferences: false,
+    },
   },
 
   literature: {
     id: 'literature',
     label: 'Literature Review',
     shortLabel: 'Literature Review',
-    outputFile: 'literature_review.md',
+    outputFile: 'literature.md',
     modelRoles: [
       {
         key: 'reviewer',
@@ -259,13 +313,21 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     denarioOpener:
       'Ready to search Semantic Scholar and your uploaded references for overlapping prior work. This runs in parallel with the Paper stage.',
+    modularEntry: {
+      headline: "What's already out there?",
+      subheader: 'Given your idea.',
+      cta: 'Review Literature',
+      placeholder: 'Paste your idea...',
+      requiresFile: false,
+      showToolPreferences: false,
+    },
   },
 
   referee: {
     id: 'referee',
     label: 'Referee Report',
     shortLabel: 'Referee Report',
-    outputFile: 'referee_report.md',
+    outputFile: 'referee.md',
     modelRoles: [
       {
         key: 'referee',
@@ -289,6 +351,15 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     denarioOpener:
       'I will simulate two independent peer reviewers and surface their comments and revision verdict. Ready?',
+    modularEntry: {
+      headline: 'Ready for review?',
+      subheader: 'Given your manuscript.',
+      cta: 'Review',
+      placeholder: 'Add any context for the reviewers (optional)...',
+      requiresFile: true,
+      fileHint: 'Attach your manuscript',
+      showToolPreferences: false,
+    },
   },
 
   keywords: {
@@ -327,6 +398,15 @@ export const STAGE_CONFIG: Record<StageId, StageConfigEntry> = {
     ],
     denarioOpener:
       'Final stage. I will extract and group keywords — Primary, Methodology, and Domain — from the manuscript.',
+    modularEntry: {
+      headline: 'How would you describe this work in a few words?',
+      subheader: 'Given your manuscript.',
+      cta: 'Extract Keywords',
+      placeholder: 'Add any context for the keyword extraction (optional)...',
+      requiresFile: true,
+      fileHint: 'Attach your manuscript',
+      showToolPreferences: false,
+    },
   },
 };
 

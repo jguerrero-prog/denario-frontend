@@ -2,7 +2,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { ConversationThread } from './ConversationThread';
 import { RightPanel } from './RightPanel';
-import { usePipelineStore } from '../../store/pipelineStore';
+import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import type { StageId } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
@@ -20,11 +20,19 @@ function PanelRightIcon() {
 }
 
 export function StagePage() {
-  const { stageId } = useParams<{ stageId: string }>();
-  const pipeline = usePipelineStore(s => s.pipeline);
+  const { projectId, stageId } = useParams<{ projectId: string; stageId: string }>();
+  const { pipeline, needsFetch, fetchFailed } = useHydratedPipeline(projectId);
 
   if (!stageId || !VALID_STAGE_IDS.has(stageId)) {
     return <Navigate to="/" replace />;
+  }
+
+  if (fetchFailed) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (needsFetch) {
+    return <div className={styles.layout} />;
   }
 
   if (!pipeline) {

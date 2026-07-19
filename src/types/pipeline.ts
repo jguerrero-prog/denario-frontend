@@ -88,6 +88,49 @@ export interface MethodsResultData {
   sections: MethodSection[];
 }
 
+export interface ResultTable {
+  caption?: string | null;
+  columns: string[];
+  rows: string[][];
+}
+
+export interface ResultFinding {
+  label: string;
+  detail: string;
+}
+
+export interface ResultSubsection {
+  number?: string | null;  // e.g. '1.1' — absent when the source doc doesn't number subsections
+  title: string;
+  body: string;
+}
+
+export interface ResultSection {
+  number?: string | null;  // e.g. '3' — absent when the source doc doesn't number sections
+  title: string;
+  body: string;
+  subsections: ResultSubsection[];
+  findings: ResultFinding[];
+  tables: ResultTable[];
+}
+
+export interface ResultArtifactCategory {
+  label: string;
+  files: string[];
+}
+
+// Dynamically parsed from real results.md (denario/results_parser.py) — not
+// schema-constrained LLM generation like Methods, since Analysis's real
+// output varies more than a fixed schema should force it into. Absent
+// entirely on older projects generated before this parser existed.
+export interface StructuredResults {
+  title: string;
+  summary: string;
+  sections: ResultSection[];
+  artifacts: ResultArtifactCategory[];
+  note?: string | null;
+}
+
 export interface AnalysisResultData {
   kind: 'analysis';
   plots: string[];
@@ -101,34 +144,80 @@ export interface AnalysisResultData {
     pValue: string;
   };
   generatedFiles: Array<{ name: string; size: string; type: 'py' | 'md' | 'dir' }>;
+  structured?: StructuredResults | null;
 }
 
 export interface PaperResultData {
   kind: 'paper';
-  texFile: { name: string; size: string };
-  pdfFile: { name: string; size: string; pages: number };
   citations: number;
-  journal: string;
   abstract: string;
+}
+
+// Mirrors DenarioBackend's denario/structured_literature.py — populated by
+// best-effort parsing of literature.md (see literature_parser.py), not
+// schema-constrained generation, so every field beyond `assessment` is
+// optional and a differently-shaped literature.md degrades gracefully.
+export interface LiteraturePaper {
+  title: string;
+  url?: string | null;
+  similarities?: string | null;
+  differences?: string | null;
+}
+
+export interface StructuredLiteratureReview {
+  decision?: string | null;
+  assessment: string;
+  papers: LiteraturePaper[];
+  conclusion?: string | null;
 }
 
 export interface LiteratureResultData {
   kind: 'literature';
-  totalScanned: number;
-  overlapCounts: { high: number; gaps: number; conflicts: number };
-  highOverlapStudies: Array<{ pct: string; title: string; venue: string }>;
-  suggestions: Array<{ text: string; action: string }>;
+  structured?: StructuredLiteratureReview | null;
+}
+
+// Mirrors DenarioBackend's denario/structured_referee.py — populated by
+// best-effort parsing of referee.md (see referee_parser.py), not
+// schema-constrained generation, so every field beyond a section's `title`
+// is optional and a differently-shaped referee.md degrades gracefully.
+export interface RefereePoint {
+  heading?: string | null;
+  body: string;
+}
+
+export interface RefereeSection {
+  title: string;
+  body: string;
+  points: RefereePoint[];
+}
+
+export interface StructuredRefereeReport {
+  score?: string | null;
+  score_note?: string | null;
+  sections: RefereeSection[];
 }
 
 export interface RefereeResultData {
   kind: 'referee';
-  verdict: { recommendation: string; chip: string };
-  comments: Array<{ id: string; label: string; text: string; action: string }>;
+  structured?: StructuredRefereeReport | null;
+}
+
+// Mirrors DenarioBackend's denario/structured_keywords.py — keywords.md's
+// format is deterministic (a plain `- term` or `- [term](url)` bullet list,
+// see that module's docstring), not fabricated groupings like the old
+// "Primary/Methodology/Domain" categories this UI used to invent.
+export interface KeywordEntry {
+  term: string;
+  url?: string | null;
+}
+
+export interface StructuredKeywords {
+  keywords: KeywordEntry[];
 }
 
 export interface KeywordsResultData {
   kind: 'keywords';
-  groups: Array<{ heading: string; terms: string[] }>;
+  structured?: StructuredKeywords | null;
 }
 
 export type StageResultData =
@@ -147,7 +236,10 @@ export interface StageResult {
   track: Track;
   file: string;         // e.g. 'idea.md'
   title?: string;       // heading for the result card
-  content: string;      // main body text
+  content: string;      // main body text (short teaser for the compact card)
+  rawContent?: string;  // full, unabridged backend markdown — for stages (e.g.
+                         // Analysis) whose real output is a long-form document
+                         // that a single short teaser paragraph can't represent
   tags?: string[];
   stats?: Record<string, string>;   // e.g. { 'R²': '0.718', 'p': '<0.001' }
   durationLabel: string;            // e.g. '1 min 12 sec'
@@ -178,7 +270,7 @@ export interface Pipeline {
   id: string;
   name: string;
   workspace: string;
-  inputFile?: InputFile;
+  inputFiles?: InputFile[];
   inputText: string;
   preferredTools: string;
   mode: 'pipeline' | 'modular';

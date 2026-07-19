@@ -8,7 +8,7 @@ export type Stage1Variant = 'idle' | 'running' | 'complete';
 const MODEL_OPTIONS: ModelGroup[] = [
   { provider: 'OPENAI',    models: ['gpt-4.1', 'gpt-4o', 'gpt-4o-mini', 'o3', 'o3-mini'] },
   { provider: 'ANTHROPIC', models: ['claude-opus-4', 'claude-sonnet-4', 'claude-haiku-4'] },
-  { provider: 'GOOGLE',    models: ['gemini-2.5-pro', 'gemini-2.5-flash'] },
+  { provider: 'GOOGLE',    models: ['gemini-2.5-pro', 'gemini-3.5-flash'] },
 ];
 
 const LOOP_STATUSES = [

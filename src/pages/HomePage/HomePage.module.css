@@ -85,7 +85,7 @@
   flex-direction: column;
   gap: 8px;
   padding-bottom: 32px;
-  padding-top: 28px;
+  padding-top: 6px;
 }
 
 .promptHeaderAttached {
@@ -107,9 +107,25 @@
   color: var(--color-text-sec);
 }
 
+.stageEntryRow {
+  display: flex;
+  justify-content: flex-start;
+  padding-bottom: 8px;
+}
+
+/* Shift the whole dropdown left by the trigger's own left padding, so the
+   button copy lines up with the stage headline below it while keeping the
+   trigger's padding (and hover background pill) intact. */
+.stageEntryDropdown {
+  margin-left: -10px;
+}
+
 /* File chip */
 
 .fileChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 8px 0 20px;
 }
 
@@ -360,6 +376,11 @@
   transition: color 0.15s;
 }
 
+.attachBtnRequired {
+  color: var(--color-text-pri);
+  font-weight: 500;
+}
+
 .attachBtn:hover {
   color: var(--color-text-sec);
 }
@@ -583,7 +604,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 48px;
+  min-height: 48px;
+  padding: 8px 0;
 }
 
 .projectRowBorder {
@@ -602,6 +624,12 @@
   color: var(--color-text-sec);
 }
 
+.projectTitleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .projectName {
   font-family: var(--font-body);
   font-weight: 500;
@@ -610,15 +638,11 @@
   white-space: nowrap;
 }
 
-.stageBadge {
-  background: var(--color-brand-light);
-  border: 1px solid var(--color-border-str);
-  border-radius: var(--radius-sm);
-  padding: 2px 8px;
+.projectStageSubheader {
   font-family: var(--font-body);
-  font-weight: 600;
-  font-size: 10px;
-  color: var(--color-brand);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--color-text-mut);
   white-space: nowrap;
 }
 

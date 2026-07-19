@@ -3,9 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../../store/pipelineStore';
 import { startStage } from '../../../utils/stageRunner';
 import { api } from '../../../api/client';
-import { nextStage } from '../../../config/stageConfig';
+import { nextStage, STAGE_CONFIG } from '../../../config/stageConfig';
+import { ParamSelect, ParamToggle, ParamNumber } from '../../../components/molecules/ParamControls/ParamControls';
 import { PlotLightbox } from '../../../components/PlotLightbox/PlotLightbox';
 import { InlineMarkdown } from '../../../utils/MarkdownBlock';
+import { usePdfAvailability } from '../../../hooks/usePdfAvailability';
 import type {
   StageId,
   StageResult,
@@ -14,7 +16,6 @@ import type {
   MethodsResultData,
   AnalysisResultData,
   PaperResultData,
-  LiteratureResultData,
   RefereeResultData,
   KeywordsResultData,
 } from '../../../types/pipeline';
@@ -28,38 +29,10 @@ const ChartBarIcon = () => (
   </svg>
 );
 
-const FileCodeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-    <path d="M10.5 1.5H4.5A1.5 1.5 0 0 0 3 3v12a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 15 15V6l-4.5-4.5Z" stroke="#6A6661" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M10.5 1.5V6H15" stroke="#6A6661" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-    <path d="M7 11l-1.5 1.5L7 14M11 11l1.5 1.5L11 14" stroke="#6A6661" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
 const FileTextIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
     <path d="M10.5 1.5H4.5A1.5 1.5 0 0 0 3 3v12a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 15 15V6l-4.5-4.5Z" stroke="#6A6661" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
     <path d="M10.5 1.5V6H15M6 9h6M6 12h4" stroke="#6A6661" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const PlusIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-    <path d="M7 2v10M2 7h10" stroke="#2D6A2D" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
-const XCircleIcon = () => (
-  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
-    <circle cx="4" cy="4" r="3.5" stroke="#2D6A2D" />
-    <path d="M2.75 2.75l2.5 2.5M5.25 2.75l-2.5 2.5" stroke="#2D6A2D" strokeWidth="0.75" strokeLinecap="round" />
-  </svg>
-);
-
-const PdfDotIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-    <rect x="2.5" y="1.5" width="13" height="15" rx="1.5" stroke="#EF4444" strokeWidth="1.25" />
-    <path d="M5.5 6h7M5.5 9h7M5.5 12h4" stroke="#EF4444" strokeWidth="1" strokeLinecap="round" />
   </svg>
 );
 
@@ -171,10 +144,6 @@ interface CardProps {
   result: StageResult;
   onApprove: () => void;
   onOpenFull?: () => void;
-}
-
-interface PaperCardProps extends CardProps {
-  onOpenTexFull?: () => void;
 }
 
 // Input stage — no card chrome, just a conversational confirmation + proceed button.
@@ -510,7 +479,7 @@ function PlotThumb({ name, backendProjectId, onClick }: { name: string; backendP
   );
 }
 
-function AnalysisResultCard({ result, onApprove }: CardProps) {
+function AnalysisResultCard({ result, onApprove, onOpenFull }: CardProps) {
   const data = result.stageData as AnalysisResultData | undefined;
   const plots = data?.plots ?? [];
   const totalPlots = data?.totalPlots ?? plots.length;
@@ -551,7 +520,8 @@ function AnalysisResultCard({ result, onApprove }: CardProps) {
         <Divider />
         <TagRow tags={result.tags} tagClassName={styles.tagChipIdea} />
         <ActionRow
-          ghost="Download codes" primary="Compile Paper →" onPrimary={onApprove}
+          ghost="Open full →" onGhost={onOpenFull}
+          primary="Compile Paper →" onPrimary={onApprove}
           ghostClassName={styles.ghostBtnIdea}
           primaryClassName={styles.primaryBtnIdea}
         />
@@ -569,217 +539,108 @@ function AnalysisResultCard({ result, onApprove }: CardProps) {
   );
 }
 
-function PaperResultCard({ result, onApprove, onOpenFull, onOpenTexFull }: PaperCardProps) {
+function PaperResultCard({ result, onApprove, onOpenFull }: CardProps) {
   const data = result.stageData as PaperResultData | undefined;
-  const texFile = data?.texFile ?? { name: 'manuscript.tex', size: '14.2 KB' };
-  const pdfFile = data?.pdfFile ?? { name: 'paper.pdf', size: '1.4 MB', pages: 8 };
-  const citations = data?.citations ?? 0;
-  const journal = data?.journal ?? '';
-  const abstract = data?.abstract ?? result.content;
-  const headerMeta = `${journal.toUpperCase()} · ${pdfFile.pages} PAGES · ${citations} CITATIONS`;
+  const abstract = data?.abstract || result.content;
   const backendProjectId = usePipelineStore(s => s.backendProjectId);
-  const texDownloadUrl = backendProjectId
-    ? api.fileUrl(backendProjectId, texFile.name)
-    : null;
+  const pdfAvailable = usePdfAvailability(backendProjectId, 'manuscript.pdf', result.generatedAt);
+  // Real compiled PDF exists only when the backend actually had a LaTeX
+  // toolchain (see DenarioBackend/docker/Dockerfile.api) — not shown at all
+  // when it doesn't, rather than a fake/always-on badge.
+  const tags = pdfAvailable ? [...(result.tags ?? []), 'PDF compiled'] : result.tags;
 
   return (
-    <div className={styles.card}>
-      {/* Custom paper header */}
-      <div className={styles.cardHeader}>
-        <div className={styles.headerLeft}>
-          <span className={styles.statusDot} />
-          <div className={styles.fileChip}>
-            <span className={styles.fileChipText}>{texFile.name} + {pdfFile.name}</span>
-          </div>
-        </div>
-        <span className={styles.paperHeaderMeta}>{headerMeta}</span>
-      </div>
+    <div className={`${styles.card} ${styles.cardIdea}`}>
+      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} badgeLabel="Paper" />
+      <Divider />
+      <p className={`${styles.cardTitle} ${styles.cardTitleIdea}`}>{result.title}</p>
+      <SectionHeading>Abstract</SectionHeading>
+      <p className={styles.cardProse}>{abstract}</p>
+      {pdfAvailable && backendProjectId && (
+        <>
+          <Divider />
+          <SectionHeading>Compiled PDF</SectionHeading>
+          <iframe
+            src={api.fileUrl(backendProjectId, 'manuscript.pdf', result.generatedAt)}
+            title="Compiled manuscript PDF"
+            className={styles.pdfPreview}
+          />
+        </>
+      )}
+      <Divider />
+      <TagRow tags={tags} tagClassName={styles.tagChipIdea} />
+      <ActionRow
+        ghost="Open full →" onGhost={onOpenFull}
+        primary="Literature Review →" onPrimary={onApprove}
+        ghostClassName={styles.ghostBtnIdea}
+        primaryClassName={styles.primaryBtnIdea}
+      />
+    </div>
+  );
+}
 
-      <p className={`${styles.cardTitle} ${styles.cardTitleSm}`}>{result.title}</p>
-      <p className={styles.cardMeta}>researcher@lab.edu · {journal} 2025</p>
+function LiteratureResultCard({ result, onApprove, onOpenFull }: CardProps) {
+  return (
+    <div className={`${styles.card} ${styles.cardIdea}`}>
+      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} badgeLabel="Literature" />
+      <Divider />
+      <p className={styles.cardProse}><InlineMarkdown text={result.content || result.rawContent || ''} /></p>
+      <Divider />
+      <TagRow tags={result.tags} tagClassName={styles.tagChipIdea} />
+      <ActionRow
+        ghost="Open full →" onGhost={onOpenFull}
+        primary="Referee Report →" onPrimary={onApprove}
+        ghostClassName={styles.ghostBtnIdea}
+        primaryClassName={styles.primaryBtnIdea}
+      />
+    </div>
+  );
+}
 
-      <div className={styles.monitorStack}>
-        {/* manuscript.tex */}
-        <div className={styles.monitor}>
-          <div className={styles.monitorLeft}>
-            <FileCodeIcon />
-            <div className={styles.monitorInfo}>
-              <span className={styles.monitorFilename}>{texFile.name}</span>
-              <span className={styles.monitorMeta}>{texFile.size}</span>
-            </div>
-          </div>
-          <div className={styles.monitorActions}>
-            <button className={styles.monitorLinkBtn} onClick={onOpenTexFull}>Preview code</button>
-            {texDownloadUrl ? (
-              <a
-                className={`${styles.monitorLinkBtn} ${styles.monitorLinkBtnGreen}`}
-                href={texDownloadUrl}
-                download={texFile.name}
-              >
-                Download .tex
-              </a>
+function RefereeResultCard({ result, onApprove, onOpenFull }: CardProps) {
+  return (
+    <div className={`${styles.card} ${styles.cardIdea}`}>
+      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} badgeLabel="Referee" />
+      <Divider />
+      <p className={styles.cardProse}><InlineMarkdown text={result.content || result.rawContent || ''} /></p>
+      <Divider />
+      <TagRow tags={result.tags} tagClassName={styles.tagChipIdea} />
+      <ActionRow
+        ghost="Open full →" onGhost={onOpenFull}
+        primary="Approve & Proceed →" onPrimary={onApprove}
+        ghostClassName={styles.ghostBtnIdea}
+        primaryClassName={styles.primaryBtnIdea}
+      />
+    </div>
+  );
+}
+
+function KeywordsResultCard({ result, onApprove, onOpenFull }: CardProps) {
+  const data = result.stageData as KeywordsResultData | undefined;
+  const keywords = data?.structured?.keywords ?? [];
+  return (
+    <div className={`${styles.card} ${styles.cardIdea}`}>
+      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} badgeLabel="Keywords" />
+      <Divider />
+      <div className={styles.kwChips}>
+        {keywords.map(({ term, url }) => (
+          <div key={term} className={styles.kwChip}>
+            {url ? (
+              <a href={url} target="_blank" rel="noreferrer" className={styles.kwChipText}>{term}</a>
             ) : (
-              <button className={`${styles.monitorLinkBtn} ${styles.monitorLinkBtnGreen}`} disabled>
-                Download .tex
-              </button>
+              <span className={styles.kwChipText}>{term}</span>
             )}
           </div>
-        </div>
-
-        {/* paper.pdf */}
-        <div className={styles.monitor}>
-          <div className={styles.monitorLeft}>
-            <PdfDotIcon />
-            <div className={styles.monitorInfo}>
-              <span className={styles.monitorFilename}>{pdfFile.name}</span>
-              <span className={styles.monitorMeta}>{pdfFile.size} · {pdfFile.pages} pages</span>
-            </div>
-          </div>
-          <div className={styles.monitorActions}>
-            <button className={styles.monitorLinkBtn}>Read manuscript</button>
-            <button className={styles.monitorOpenBtn} onClick={onOpenFull}>Open manuscript →</button>
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.abstractInset}>
-        <p className={styles.abstractLabel}>Abstract</p>
-        <p className={styles.abstractText}>{abstract}</p>
-        <p className={styles.abstractLink}>Read full abstract →</p>
-      </div>
-
-      <Divider />
-
-      {/* 3-button footer */}
-      <div className={styles.paperFooter}>
-        <div className={styles.paperFooterLeft}>
-          <button className={styles.regenLinkBtn}>Regenerate</button>
-          <button className={styles.ghostBtn}>Compile Paper →</button>
-        </div>
-        <button className={styles.primaryBtn} onClick={onApprove}>Literature Review →</button>
-      </div>
-    </div>
-  );
-}
-
-function LiteratureResultCard({ result, onApprove }: CardProps) {
-  const data = result.stageData as LiteratureResultData | undefined;
-  const totalScanned = data?.totalScanned ?? 0;
-  const overlapCounts = data?.overlapCounts ?? { high: 0, gaps: 0, conflicts: 0 };
-  const studies = data?.highOverlapStudies ?? [];
-  const suggestions = data?.suggestions ?? [];
-  return (
-    <div className={styles.card}>
-      <CardHeader file={result.file} source={`Scanned ${totalScanned} papers`} timestamp={result.durationLabel} />
-      <div className={styles.overlapSummary}>
-        <div className={styles.overlapItem}>
-          <span className={`${styles.overlapDot} ${styles.overlapDotAmber}`} />
-          <span className={styles.overlapAmber}>{overlapCounts.high} high-overlap papers</span>
-        </div>
-        <div className={styles.overlapItem}>
-          <span className={`${styles.overlapDot} ${styles.overlapDotBlue}`} />
-          <span className={styles.overlapBlue}>{overlapCounts.gaps} citation gaps</span>
-        </div>
-        <div className={styles.overlapItem}>
-          <span className={`${styles.overlapDot} ${styles.overlapDotRed}`} />
-          <span className={styles.overlapRed}>{overlapCounts.conflicts} methodology conflict</span>
-        </div>
-      </div>
-      <Divider />
-      <SectionHeading>High-Overlap Studies</SectionHeading>
-      <div className={styles.studyStack}>
-        {studies.map(({ pct, title, venue }, i) => (
-          <div key={pct} className={`${styles.studyRow} ${i < studies.length - 1 ? styles.studyRowBorder : ''}`}>
-            <div className={styles.studyLeft}>
-              <div className={styles.pctBadge}>{pct}</div>
-              <span className={styles.studyTitle}>{title}</span>
-              <div className={styles.venueChip}><span className={styles.venueChipText}>{venue}</span></div>
-            </div>
-            <span className={styles.studyLink}>View →</span>
-          </div>
         ))}
       </div>
       <Divider />
-      <SectionHeading>Suggested Additions</SectionHeading>
-      <div className={styles.suggestionStack}>
-        {suggestions.map(({ text, action }) => (
-          <div key={action} className={styles.suggestionRow}>
-            <div className={styles.suggestionLeft}>
-              <PlusIcon />
-              <span className={styles.suggestionText}>{text}</span>
-            </div>
-            <span className={styles.suggestionAction}>{action}</span>
-          </div>
-        ))}
-      </div>
-      <Divider />
-      <TagRow tags={result.tags} />
-      <ActionRow ghost="View full list" primary="Approve & Proceed →" onPrimary={onApprove} />
-    </div>
-  );
-}
-
-function RefereeResultCard({ result, onApprove }: CardProps) {
-  const data = result.stageData as RefereeResultData | undefined;
-  const verdict = data?.verdict ?? { recommendation: result.content, chip: 'Revision' };
-  const comments = data?.comments ?? [];
-  return (
-    <div className={styles.card}>
-      <CardHeader file={result.file} source="Generated by Denario" timestamp={result.durationLabel} />
-      <div className={styles.verdictRow}>
-        <div className={styles.verdictLeft}>
-          <p className={styles.verdictHeading}>Recommendation</p>
-          <p className={styles.verdictText}>{verdict.recommendation}</p>
-        </div>
-        <div className={styles.verdictChip}>{verdict.chip}</div>
-      </div>
-      <Divider />
-      <SectionHeading>Reviewer Comments</SectionHeading>
-      <div className={styles.commentStack}>
-        {comments.map(({ id, label, text, action }) => (
-          <div key={id} className={styles.commentCard}>
-            <div className={styles.commentHeader}>
-              <div className={styles.commentLeft}>
-                <span className={styles.commentDot} />
-                <span className={styles.commentLabel}>{label}</span>
-              </div>
-              <span className={styles.commentId}>{id}</span>
-            </div>
-            <p className={styles.commentText}>{text}</p>
-            <div className={styles.commentAction}>{action}</div>
-          </div>
-        ))}
-      </div>
-      <TagRow tags={result.tags} />
-      <ActionRow ghost="View full report" primary="Approve & Proceed →" onPrimary={onApprove} />
-    </div>
-  );
-}
-
-function KeywordsResultCard({ result, onApprove }: CardProps) {
-  const data = result.stageData as KeywordsResultData | undefined;
-  const groups = data?.groups ?? [];
-  const totalTerms = groups.reduce((acc, g) => acc + g.terms.length, 0);
-  return (
-    <div className={styles.card}>
-      <CardHeader file={result.file} source={`${totalTerms} terms generated`} timestamp={result.durationLabel} />
-      {groups.map(({ heading, terms }, gi) => (
-        <div key={heading} className={styles.kwGroup}>
-          {gi > 0 && <Divider />}
-          <SectionHeading>{heading}</SectionHeading>
-          <div className={styles.kwChips}>
-            {terms.map((term) => (
-              <div key={term} className={styles.kwChip}>
-                <span className={styles.kwChipText}>{term}</span>
-                <XCircleIcon />
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
-      <Divider />
-      <TagRow tags={result.tags} />
-      <ActionRow ghost="Edit keywords" primary="Finalise →" onPrimary={onApprove} />
+      <TagRow tags={result.tags} tagClassName={styles.tagChipIdea} />
+      <ActionRow
+        ghost="Open full →" onGhost={onOpenFull}
+        primary="Finalise →" onPrimary={onApprove}
+        ghostClassName={styles.ghostBtnIdea}
+        primaryClassName={styles.primaryBtnIdea}
+      />
     </div>
   );
 }
@@ -803,8 +664,18 @@ const RefreshIcon = () => (
 
 function ErrorCard({ stageId }: { stageId: StageId }) {
   const stage = usePipelineStore(s => s.pipeline?.stages[stageId]);
+  const setStageParam = usePipelineStore(s => s.setStageParam);
   const error = stage?.error ?? 'An unexpected error occurred.';
   const track  = stage?.track ?? 'standard';
+
+  const journalField = STAGE_CONFIG[stageId].paramFields.find(f => f.key === 'journal');
+  const journalValue = (stage?.params?.journal as string | undefined) ?? (journalField?.default as string) ?? 'NONE';
+  const citationsField = STAGE_CONFIG[stageId].paramFields.find(f => f.key === 'add_citations');
+  const citationsValue = (stage?.params?.add_citations as boolean | undefined) ?? (citationsField?.default as boolean) ?? true;
+  const kwTypeField = STAGE_CONFIG[stageId].paramFields.find(f => f.key === 'kw_type');
+  const kwTypeValue = (stage?.params?.kw_type as string | undefined) ?? (kwTypeField?.default as string) ?? 'unesco';
+  const numKeywordsField = STAGE_CONFIG[stageId].paramFields.find(f => f.key === 'num_keywords');
+  const numKeywordsValue = (stage?.params?.num_keywords as number | undefined) ?? (numKeywordsField?.default as number) ?? 10;
 
   function handleRetry() {
     startStage(stageId, track);
@@ -817,6 +688,46 @@ function ErrorCard({ stageId }: { stageId: StageId }) {
         <span className={styles.errorTitle}>Stage failed</span>
       </div>
       <p className={styles.errorMsg}>{error}</p>
+      {journalField && (
+        <div className={styles.errorJournalRow}>
+          <span className={styles.errorJournalLabel}>{journalField.label}</span>
+          <ParamSelect
+            value={journalValue}
+            options={journalField.options ?? []}
+            onChange={(v) => setStageParam(stageId, 'journal', v)}
+          />
+        </div>
+      )}
+      {citationsField && (
+        <div className={styles.errorJournalRow}>
+          <span className={styles.errorJournalLabel}>{citationsField.label}</span>
+          <ParamToggle
+            value={citationsValue}
+            onChange={(v) => setStageParam(stageId, 'add_citations', v)}
+          />
+        </div>
+      )}
+      {kwTypeField && (
+        <div className={styles.errorJournalRow}>
+          <span className={styles.errorJournalLabel}>{kwTypeField.label}</span>
+          <ParamSelect
+            value={kwTypeValue}
+            options={kwTypeField.options ?? []}
+            onChange={(v) => setStageParam(stageId, 'kw_type', v)}
+          />
+        </div>
+      )}
+      {numKeywordsField && (
+        <div className={styles.errorJournalRow}>
+          <span className={styles.errorJournalLabel}>{numKeywordsField.label}</span>
+          <ParamNumber
+            value={numKeywordsValue}
+            min={numKeywordsField.min}
+            max={numKeywordsField.max}
+            onChange={(v) => setStageParam(stageId, 'num_keywords', v)}
+          />
+        </div>
+      )}
       <button className={styles.retryBtn} onClick={handleRetry}>
         <RefreshIcon />
         Retry
@@ -852,24 +763,16 @@ export function StageResultCard({ stageId }: { stageId: StageId }) {
     if (projectId) navigate(`/project/${projectId}/stage/${stageId}/full`);
   }
 
-  function handleOpenPdfFull() {
-    if (projectId) navigate(`/project/${projectId}/stage/paper/full?view=pdf`);
-  }
-
-  function handleOpenTexFull() {
-    if (projectId) navigate(`/project/${projectId}/stage/paper/full?view=tex`);
-  }
-
   const props = { result, onApprove: handleApprove };
   switch (stageId) {
     case 'input':      return <InputResultCard onApprove={handleApprove} />;
     case 'idea':       return <IdeaResultCard {...props} onOpenFull={handleOpenFull} />;
     case 'methods':    return <MethodsResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'analysis':   return <AnalysisResultCard {...props} />;
-    case 'paper':      return <PaperResultCard {...props} onOpenFull={handleOpenPdfFull} onOpenTexFull={handleOpenTexFull} />;
-    case 'literature': return <LiteratureResultCard {...props} />;
-    case 'referee':    return <RefereeResultCard {...props} />;
-    case 'keywords':   return <KeywordsResultCard {...props} />;
+    case 'analysis':   return <AnalysisResultCard {...props} onOpenFull={handleOpenFull} />;
+    case 'paper':      return <PaperResultCard {...props} onOpenFull={handleOpenFull} />;
+    case 'literature': return <LiteratureResultCard {...props} onOpenFull={handleOpenFull} />;
+    case 'referee':    return <RefereeResultCard {...props} onOpenFull={handleOpenFull} />;
+    case 'keywords':   return <KeywordsResultCard {...props} onOpenFull={handleOpenFull} />;
     default:           return null;
   }
 }

@@ -1,9 +1,32 @@
+/* ── Collapsed-rail hover tooltip (portalled to document.body) ── */
+
+.iconTooltip {
+  position: fixed;
+  transform: translateY(-50%);
+  background: #FFFFFF;
+  color: #000000;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-family: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  pointer-events: none;
+  z-index: 1000;
+}
+
 /* ── Sidebar shell ── */
 
 .sidebarShell {
   position: relative;
   flex-shrink: 0;
   width: calc(200px + 12px + 12px);
+  transition: width 0.18s ease;
+}
+
+.sidebarShellCollapsed {
+  width: calc(56px + 12px + 12px);
 }
 
 .sidebarBacking {
@@ -31,6 +54,11 @@
   overflow-y: auto;
   border-radius: 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.28);
+  transition: width 0.18s ease;
+}
+
+.sidebarCollapsed {
+  width: 56px;
 }
 
 /* ── Top strip ── */
@@ -41,6 +69,14 @@
   justify-content: space-between;
   padding: 16px 16px 12px;
   flex-shrink: 0;
+}
+
+.sidebarCollapsed .sidebarTop {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px 0 12px;
 }
 
 .logoGroup {
@@ -68,6 +104,23 @@
   flex-shrink: 0;
 }
 
+.brandRing {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: conic-gradient(#16A34A 0deg 90deg, #EA580C 90deg 180deg, #2563EB 180deg 270deg, #7C3AED 270deg 360deg);
+}
+
+.brandRing::after {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: #000000;
+}
+
 .collapseBtn {
   background: none;
   border: none;
@@ -89,6 +142,12 @@
   height: 1px;
   background: rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
+}
+
+.sidebarCollapsed .toggleSection,
+.sidebarCollapsed .toggleAreaDivider,
+.sidebarCollapsed .sectionLabel {
+  visibility: hidden;
 }
 
 /* ── Pipeline / Modular toggle ── */
@@ -145,18 +204,6 @@
   text-align: left;
 }
 
-.modularWarning {
-  color: #C97B2E;
-  animation: warningFade 4s ease forwards;
-}
-
-@keyframes warningFade {
-  0%   { opacity: 0; }
-  10%  { opacity: 1; }
-  70%  { opacity: 1; }
-  100% { opacity: 0; }
-}
-
 /* ── Section label ── */
 
 .sectionLabel {
@@ -175,9 +222,15 @@
 .stageNav {
   display: flex;
   flex-direction: column;
+  gap: 6px;
   width: 100%;
   padding-bottom: 12px;
   flex-shrink: 0;
+}
+
+.sidebarCollapsed .stageRow {
+  justify-content: center;
+  padding: 0 8px;
 }
 
 .stageRow {
@@ -377,6 +430,17 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
+}
+
+.sidebarCollapsed .userRow {
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 16px 8px;
+}
+
+.sidebarCollapsed .settingsBtn {
+  order: -1;
 }
 
 .userInfo {

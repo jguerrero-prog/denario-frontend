@@ -1,11 +1,64 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { PlotLightbox } from '../../components/PlotLightbox/PlotLightbox';
 import { usePipelineStore } from '../../store/pipelineStore';
-import { STAGE_ORDER } from '../../config/stageConfig';
-import type { AnalysisResultData } from '../../types/pipeline';
+import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
+import { InlineMarkdown } from '../../utils/MarkdownBlock';
+import { api } from '../../api/client';
+import type { AnalysisResultData, ResultSection, ResultTable } from '../../types/pipeline';
 import styles from './AnalysisFullPage.module.css';
+
+// ── Structured report rendering ────────────────────────────────────────────────
+// Renders denario/results_parser.py's dynamically-parsed structure. Every piece
+// is optional by design (see StructuredResults' own docstring) — a report
+// missing tables, or subsections, or an artifacts section just renders without
+// that piece, rather than assuming every results.md has the same shape.
+
+function ReportTable({ table }: { table: ResultTable }) {
+  return (
+    <div className={styles.tableWrap}>
+      {table.caption && <p className={styles.tableCaption}>{table.caption}</p>}
+      <table className={styles.reportTable}>
+        <thead>
+          <tr>
+            {table.columns.map((c, i) => <th key={i}><InlineMarkdown text={c} /></th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, ri) => (
+            <tr key={ri}>
+              {row.map((cell, ci) => <td key={ci}><InlineMarkdown text={cell} /></td>)}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ReportSection({ section }: { section: ResultSection }) {
+  return (
+    <div className={styles.section}>
+      <p className={styles.sectionLabel}>{section.number ? `${section.number}. ` : ''}{section.title}</p>
+      {section.body && <p className={styles.prose}><InlineMarkdown text={section.body} /></p>}
+      {section.findings.length > 0 && (
+        <ul className={styles.findingsList}>
+          {section.findings.map((f, i) => (
+            <li key={i}><strong>{f.label}</strong>{f.detail ? `: ${f.detail}` : ''}</li>
+          ))}
+        </ul>
+      )}
+      {section.tables.map((t, i) => <ReportTable key={i} table={t} />)}
+      {section.subsections.map((sub, i) => (
+        <div key={i} className={styles.subsection}>
+          <p className={styles.subsectionLabel}>{sub.number ? `${sub.number} ` : ''}{sub.title}</p>
+          {sub.body && <p className={styles.prose}><InlineMarkdown text={sub.body} /></p>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -47,10 +100,37 @@ function FileIcon() {
 function ChartBarIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-      <rect x="2" y="10" width="4" height="8" rx="1" fill="#8B837C" />
-      <rect x="8" y="6" width="4" height="12" rx="1" fill="#8B837C" />
-      <rect x="14" y="2" width="4" height="16" rx="1" fill="#8B837C" />
+      <rect x="2" y="10" width="4" height="8" rx="1" fill="var(--color-text-sec)" />
+      <rect x="8" y="6" width="4" height="12" rx="1" fill="var(--color-text-sec)" />
+      <rect x="14" y="2" width="4" height="16" rx="1" fill="var(--color-text-sec)" />
     </svg>
+  );
+}
+
+// Real image thumbnail, same pattern as ResultCards.tsx's PlotThumb — falls
+// back to the icon+filename placeholder only if the image genuinely fails
+// to load (or there's no backend project id to resolve it against yet).
+function PlotThumb({ name, backendProjectId, onClick }: { name: string; backendProjectId?: string | null; onClick: () => void }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = !!backendProjectId && !failed;
+
+  return (
+    <button className={styles.plotCell} onClick={onClick}>
+      <div className={styles.plotCellInner}>
+        {showImage ? (
+          <img
+            key={name}
+            src={api.fileUrl(backendProjectId, `input_files/plots/${name}`)}
+            alt={name}
+            className={styles.plotCellImg}
+            onError={() => setFailed(true)}
+          />
+        ) : (
+          <ChartBarIcon />
+        )}
+      </div>
+      <span className={styles.plotName}>{name}</span>
+    </button>
   );
 }
 
@@ -59,12 +139,11 @@ function ChartBarIcon() {
 export function AnalysisFullPage() {
   const navigate = useNavigate();
   const { projectId, stageId = 'analysis' } = useParams<{ projectId: string; stageId: string }>();
-  const pipeline = usePipelineStore(s => s.pipeline);
+  const { pipeline, needsFetch, fetchFailed } = useHydratedPipeline(projectId);
   const result = pipeline?.stages['analysis']?.result;
   const data = result?.stageData as AnalysisResultData | undefined;
+  const backendProjectId = usePipelineStore(s => s.backendProjectId);
 
-  const stageIndex = STAGE_ORDER.indexOf('analysis');
-  const stageNum = stageIndex >= 0 ? stageIndex + 1 : 4;
   const file = result?.file ?? 'results.md';
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -80,6 +159,18 @@ export function AnalysisFullPage() {
     navigate(`/project/${projectId}/stage/${stageId}`);
   }
 
+  function handleCopy() {
+    navigator.clipboard.writeText(result?.rawContent ?? result?.content ?? '').catch(() => {});
+  }
+
+  if (fetchFailed) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (needsFetch) {
+    return <div className={styles.layout} />;
+  }
+
   return (
     <div className={styles.layout}>
       <Sidebar userEmail="researcher@lab.edu" />
@@ -91,98 +182,83 @@ export function AnalysisFullPage() {
             <ChevronLeftIcon />
             Back to conversation
           </button>
-
-          <div className={styles.breadcrumb}>
-            <span className={styles.breadcrumbDim}>Stage {stageNum}</span>
-            <span className={styles.breadcrumbSep}>·</span>
-            <span className={styles.breadcrumbDim}>Analysis</span>
-            <span className={styles.breadcrumbSep}>·</span>
-            <span className={styles.breadcrumbActive}>{file}</span>
-          </div>
-
-          <div className={styles.topBarRight}>
-            <button className={styles.iconBtn} aria-label="Copy"><CopyIcon /></button>
-            <button className={styles.iconBtn} aria-label="Download"><DownloadIcon /></button>
-          </div>
         </div>
 
         {/* Scrollable document */}
         <div className={styles.scrollArea}>
           <div className={styles.document}>
 
-            {/* Eyebrow */}
-            <div className={styles.eyebrow}>
-              <span className={styles.eyebrowDot} />
-              <div className={styles.fileChip}>
-                <span className={styles.fileChipText}>{file}</span>
+            {/* Header: eyebrow (copy/download) + title + divider — same
+                treatment as MethodsFullPage, not the old green-dot file badge. */}
+            <div className={styles.docHeader}>
+              <div className={styles.eyebrow}>
+                <div className={styles.eyebrowActions}>
+                  <button className={styles.iconBtn} aria-label="Copy" onClick={handleCopy}>
+                    <CopyIcon />
+                  </button>
+                  <button className={styles.iconBtn} aria-label="Download">
+                    <DownloadIcon />
+                  </button>
+                </div>
               </div>
-              <span className={styles.eyebrowMeta}>· Generated by Denario ·</span>
-              <span className={styles.eyebrowDetail}>
-                Executed in {result?.durationLabel ?? '1m 42s'}
-                {data?.selfHeals ? ` · ${data.selfHeals} self-heals` : ''}
-              </span>
+              <h1 className={styles.docTitle}>{result?.title ?? 'Analysis Results'}</h1>
+              <div className={styles.divider} />
             </div>
 
-            {/* Title */}
-            <h1 className={styles.docTitle}>{result?.title ?? 'Analysis Results'}</h1>
-            <div className={styles.divider} />
-
-            {/* Statistical Summary */}
-            {data?.statsGrid && (
+            {/* Visual Outputs — real plot thumbnails, same pattern as the
+                compact Analysis card (PlotThumb), not a generic chart icon. */}
+            {plots.length > 0 && (
               <div className={styles.section}>
-                <p className={styles.sectionLabel}>Statistical Summary</p>
-                <div className={styles.statsGrid}>
-                  <div className={styles.statsCell}>
-                    <span className={styles.statsValue}>r = {data.statsGrid.pearsonR}</span>
-                    <span className={styles.statsLabel}>Pearson Correlation</span>
-                  </div>
-                  <div className={styles.statsCell}>
-                    <span className={styles.statsValue}>ρ = {data.statsGrid.spearmanRho}</span>
-                    <span className={styles.statsLabel}>Spearman Correlation</span>
-                  </div>
-                  <div className={styles.statsCell}>
-                    <span className={styles.statsValue}>R² = {data.statsGrid.r2}</span>
-                    <span className={styles.statsLabel}>OLS Model Fit</span>
-                  </div>
-                  <div className={styles.statsCell}>
-                    <span className={`${styles.statsValue} ${styles.statsValueGreen}`}>
-                      p {data.statsGrid.pValue}
-                    </span>
-                    <span className={styles.statsLabel}>Significance</span>
-                  </div>
+                <p className={styles.sectionLabel}>Visual Outputs</p>
+                <div className={styles.plotGrid}>
+                  {visiblePlots.map((name, i) => (
+                    <PlotThumb key={name} name={name} backendProjectId={backendProjectId} onClick={() => openLightbox(i)} />
+                  ))}
+                  {extraCount > 0 && (
+                    <button className={`${styles.plotCell} ${styles.plotCellMore}`} onClick={() => openLightbox(3)}>
+                      <div className={styles.plotCellInner}>
+                        <span className={styles.plotMoreCount}>+{extraCount}</span>
+                      </div>
+                      <span className={styles.plotName}>more</span>
+                    </button>
+                  )}
                 </div>
+                <button className={styles.viewAllLink} onClick={() => openLightbox(0)}>
+                  View all {plots.length} plots →
+                </button>
               </div>
             )}
 
-            {/* Visual Outputs */}
-            <div className={styles.section}>
-              <p className={styles.sectionLabel}>Visual Outputs</p>
-              <div className={styles.plotGrid}>
-                {visiblePlots.map((name, i) => (
-                  <button key={name} className={styles.plotCell} onClick={() => openLightbox(i)}>
-                    <div className={styles.plotCellInner}>
-                      <ChartBarIcon />
-                    </div>
-                    <span className={styles.plotName}>{name}</span>
-                  </button>
-                ))}
-                {extraCount > 0 && (
-                  <button className={`${styles.plotCell} ${styles.plotCellMore}`} onClick={() => openLightbox(3)}>
-                    <div className={styles.plotCellInner}>
-                      <span className={styles.plotMoreText}>+{extraCount} more</span>
-                    </div>
-                  </button>
-                )}
-              </div>
-              <button className={styles.viewAllLink} onClick={() => openLightbox(0)}>
-                View all {plots.length} plots in lightbox →
-              </button>
-            </div>
-
             <div className={styles.divider} />
 
-            {/* Narrative Findings */}
-            {data?.narrativeFindings && (
+            {/* Full Report — prefers the structured, dynamically-parsed
+                report (denario/results_parser.py) when present: real headers,
+                real HTML tables, real findings lists. Falls back to the raw
+                markdown dump (older projects, no results.json sidecar yet)
+                and finally to the short narrative snippet. */}
+            {data?.structured ? (
+              <>
+                {data.structured.note && (
+                  <div className={styles.section}>
+                    <p className={styles.noteBlock}><InlineMarkdown text={data.structured.note} /></p>
+                  </div>
+                )}
+                {data.structured.summary && (
+                  <div className={styles.section}>
+                    <p className={styles.sectionLabel}>Summary</p>
+                    <p className={styles.prose}><InlineMarkdown text={data.structured.summary} /></p>
+                  </div>
+                )}
+                {data.structured.sections.map((section, i) => (
+                  <ReportSection key={i} section={section} />
+                ))}
+              </>
+            ) : result?.rawContent ? (
+              <div className={styles.section}>
+                <p className={styles.sectionLabel}>Full Report</p>
+                <pre className={styles.fullDocument}>{result.rawContent}</pre>
+              </div>
+            ) : data?.narrativeFindings && (
               <div className={styles.section}>
                 <p className={styles.sectionLabel}>Narrative Findings</p>
                 <p className={styles.prose}>{data.narrativeFindings}</p>
@@ -191,8 +267,29 @@ export function AnalysisFullPage() {
 
             <div className={styles.divider} />
 
-            {/* Generated Files */}
-            {data?.generatedFiles && data.generatedFiles.length > 0 && (
+            {/* Generated Files — prefers structured.artifacts (real,
+                categorized file references parsed from the report's own
+                references section) over the generic generatedFiles mock. */}
+            {data?.structured && data.structured.artifacts.length > 0 ? (
+              <div className={styles.section}>
+                <p className={styles.sectionLabel}>Generated Artifacts</p>
+                {data.structured.artifacts.map((cat, i) => (
+                  <div key={i} className={styles.artifactCategory}>
+                    <p className={styles.artifactCategoryLabel}>{cat.label}</p>
+                    <div className={styles.fileList}>
+                      {cat.files.map(f => (
+                        <div key={f} className={styles.fileRow}>
+                          <div className={styles.fileRowLeft}>
+                            <span className={styles.fileIconWrap}><FileIcon /></span>
+                            <span className={styles.fileName}>{f}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : data?.generatedFiles && data.generatedFiles.length > 0 && (
               <div className={styles.section}>
                 <p className={styles.sectionLabel}>Generated Files</p>
                 <div className={styles.fileList}>
@@ -226,6 +323,7 @@ export function AnalysisFullPage() {
           currentIndex={lightboxIdx}
           onClose={() => setLightboxOpen(false)}
           onNavigate={setLightboxIdx}
+          backendProjectId={backendProjectId}
         />
       )}
     </div>

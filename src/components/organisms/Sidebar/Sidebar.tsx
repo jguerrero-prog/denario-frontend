@@ -1,10 +1,30 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../../store/pipelineStore';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
 import { ApiKeysModal } from '../../molecules/ApiKeysModal/ApiKeysModal';
-import type { StageStatus } from '../../../types/pipeline';
+import { STAGE_CONFIG } from '../../../config/stageConfig';
+import type { StageStatus, StageId } from '../../../types/pipeline';
 import styles from './Sidebar.module.css';
+
+// ── Collapsed-rail hover tooltip (portalled — the sidebar clips overflow-x,
+// so an absolutely-positioned bubble inside it would get cut off) ─────────────
+
+function IconTooltip({ label, anchorRect }: { label: string; anchorRect: DOMRect }) {
+  return createPortal(
+    <div
+      className={styles.iconTooltip}
+      style={{
+        top: anchorRect.top + anchorRect.height / 2,
+        left: anchorRect.right + 8,
+      }}
+    >
+      {label}
+    </div>,
+    document.body,
+  );
+}
 
 // ── Icon components ───────────────────────────────────────────────────────────
 
@@ -106,6 +126,10 @@ function LockIcon() {
   );
 }
 
+// ── Brand ──────────────────────────────────────────────────────────────────────
+
+const BRAND_COLORS = ['#16A34A', '#EA580C', '#2563EB', '#7C3AED'];
+
 // ── Stage definitions ─────────────────────────────────────────────────────────
 
 type StageIcon = React.ComponentType;
@@ -139,26 +163,21 @@ export function Sidebar({
   const navigate = useNavigate();
   const params = useParams<{ projectId?: string; stageId?: string }>();
   const pipeline = usePipelineStore(s => s.pipeline);
+  const ensureStagePrompt = usePipelineStore(s => s.ensureStagePrompt);
 
   const [mode, setMode] = useState<'pipeline' | 'modular'>(defaultMode);
-  const [warningVisible, setWarningVisible] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [showApiKeys, setShowApiKeys] = useState(false);
-  const backendStatus = useBackendStatus();
-  const warningTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hoveredTooltip, setHoveredTooltip] = useState<{ label: string; rect: DOMRect } | null>(null);
 
-  function switchMode(next: 'pipeline' | 'modular') {
-    setMode(next);
-    if (next === 'modular') {
-      if (warningTimer.current) clearTimeout(warningTimer.current);
-      setWarningVisible(true);
-      warningTimer.current = setTimeout(() => setWarningVisible(false), 4000);
-    } else {
-      if (warningTimer.current) clearTimeout(warningTimer.current);
-      setWarningVisible(false);
-    }
+  function showTooltip(e: React.MouseEvent<HTMLElement>, label: string) {
+    setHoveredTooltip({ label, rect: e.currentTarget.getBoundingClientRect() });
   }
 
-  useEffect(() => () => { if (warningTimer.current) clearTimeout(warningTimer.current); }, []);
+  function hideTooltip() {
+    setHoveredTooltip(null);
+  }
+  const backendStatus = useBackendStatus();
 
   // Derive from URL — the URL is the source of truth for which stage is shown
   const activeStageId = params.stageId ?? '';
@@ -179,6 +198,7 @@ export function Sidebar({
 
   function handleStageClick(stageId: string) {
     if (!canNavigate(stageId)) return;
+    if (mode === 'modular') ensureStagePrompt(stageId as StageId);
     navigate(`/project/${projectId}/stage/${stageId}`);
   }
 
@@ -196,55 +216,65 @@ export function Sidebar({
 
   return (
     <>
-    <div className={styles.sidebarShell}>
+    <div className={`${styles.sidebarShell} ${collapsed ? styles.sidebarShellCollapsed : ''}`}>
     <div className={styles.sidebarBacking} />
-    <aside className={styles.sidebar}>
+    <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}>
       {/* Top: wordmark + brand bar + collapse */}
       <div className={styles.sidebarTop}>
-        <div className={styles.logoGroup}>
-          <p className={styles.logoText}>Denario</p>
-          <div className={styles.brandBar}>
-            {[{ color: '#16A34A' }, { color: '#EA580C' }, { color: '#2563EB' }, { color: '#7C3AED' }].map(({ color }) => (
-              <div key={color} className={styles.brandBarSegment} style={{ background: color }} />
-            ))}
+        {collapsed ? (
+          <div className={styles.brandRing} aria-hidden="true" />
+        ) : (
+          <div className={styles.logoGroup}>
+            <p className={styles.logoText}>Denario</p>
+            <div className={styles.brandBar}>
+              {BRAND_COLORS.map(color => (
+                <div key={color} className={styles.brandBarSegment} style={{ background: color }} />
+              ))}
+            </div>
           </div>
-        </div>
-        <button className={styles.collapseBtn} aria-label="Collapse sidebar">
+        )}
+        <button
+          className={styles.collapseBtn}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          onClick={() => setCollapsed(c => !c)}
+          onMouseEnter={e => showTooltip(e, collapsed ? 'Expand sidebar' : 'Collapse sidebar')}
+          onMouseLeave={hideTooltip}
+        >
           <PanelLeftIcon />
         </button>
       </div>
 
       <div className={styles.sidebarDivider} />
 
-      {/* Pipeline / Modular toggle */}
+      {/* Pipeline / Modular toggle — kept in the layout (not unmounted) when
+          collapsed, just made invisible, so the stage icons below don't shift. */}
       <div className={styles.toggleSection}>
         <div className={styles.togglePill}>
           <button
             className={`${styles.toggleOption} ${mode === 'pipeline' ? styles.toggleActive : ''}`}
-            onClick={() => switchMode('pipeline')}
+            onClick={() => setMode('pipeline')}
           >
             Pipeline
           </button>
           <button
             className={`${styles.toggleLabel} ${mode === 'modular' ? styles.toggleActive : ''}`}
-            onClick={() => switchMode('modular')}
+            onClick={() => setMode('modular')}
           >
             Modular
           </button>
         </div>
         <p className={styles.toggleCaption}>
-          {warningVisible
-            ? <span className={styles.modularWarning}>Stages may produce incomplete results without earlier outputs.</span>
-            : mode === 'pipeline'
-              ? 'Sequential · stages unlock in order'
-              : 'Any stage, any time'}
+          {mode === 'pipeline'
+            ? 'Sequential · stages unlock in order'
+            : STAGE_CONFIG[activeStageId as StageId]?.modularEntry.subheader ?? 'Any stage, any time'}
         </p>
       </div>
 
-      <div className={styles.sidebarDivider} />
+      <div className={`${styles.sidebarDivider} ${styles.toggleAreaDivider}`} />
+
+      <div className={styles.sectionLabel}>Tools</div>
 
       {/* Stage navigation */}
-      <div className={styles.sectionLabel}>Tools</div>
       <nav className={styles.stageNav}>
         {STAGES.map(({ id, label, Icon }) => {
           const locked = !canNavigate(id);
@@ -254,10 +284,12 @@ export function Sidebar({
               className={rowClass(id)}
               onClick={() => handleStageClick(id)}
               aria-current={id === activeStageId ? 'page' : undefined}
+              onMouseEnter={collapsed ? (e => showTooltip(e, label)) : undefined}
+              onMouseLeave={collapsed ? hideTooltip : undefined}
             >
               <span className={styles.stageIcon}><Icon /></span>
-              <span className={styles.stageLabel}>{label}</span>
-              {locked && mode === 'pipeline' &&
+              {!collapsed && <span className={styles.stageLabel}>{label}</span>}
+              {!collapsed && locked && mode === 'pipeline' &&
                 <span className={styles.stageLockIcon}><LockIcon /></span>
               }
             </button>
@@ -267,23 +299,27 @@ export function Sidebar({
 
       <div className={styles.sidebarDivider} />
 
-      {/* Project */}
-      <div className={styles.projectSection}>
-        <p className={styles.sectionLabel}>Project</p>
-        <p className={styles.projectName}>{displayName ?? 'No project open'}</p>
-        <div className={styles.backendStatus} title={
-          backendStatus === 'connected' ? 'Backend connected'
-          : backendStatus === 'offline'  ? 'Backend offline — running in mock mode'
-          : 'Connecting to backend…'
-        }>
-          <span className={`${styles.statusDot} ${styles[`statusDot_${backendStatus}`]}`} />
-          <span className={styles.statusLabel}>
-            {backendStatus === 'connected' ? 'Connected'
-             : backendStatus === 'offline'  ? 'Offline'
-             : 'Connecting…'}
-          </span>
-        </div>
-      </div>
+      {!collapsed && (
+        <>
+          {/* Project */}
+          <div className={styles.projectSection}>
+            <p className={styles.sectionLabel}>Project</p>
+            <p className={styles.projectName}>{displayName ?? 'No project open'}</p>
+            <div className={styles.backendStatus} title={
+              backendStatus === 'connected' ? 'Backend connected'
+              : backendStatus === 'offline'  ? 'Backend offline — running in mock mode'
+              : 'Connecting to backend…'
+            }>
+              <span className={`${styles.statusDot} ${styles[`statusDot_${backendStatus}`]}`} />
+              <span className={styles.statusLabel}>
+                {backendStatus === 'connected' ? 'Connected'
+                 : backendStatus === 'offline'  ? 'Offline'
+                 : 'Connecting…'}
+              </span>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Spacer */}
       <div className={styles.sidebarSpacer} />
@@ -291,19 +327,26 @@ export function Sidebar({
       {/* Bottom */}
       <div className={styles.sidebarBottom}>
         <div className={styles.sidebarDivider} />
-        <button className={styles.newProjectBtn} onClick={() => navigate('/')}>
-          + New project
+        <button
+          className={styles.newProjectBtn}
+          onClick={() => navigate('/')}
+          onMouseEnter={collapsed ? (e => showTooltip(e, 'New project')) : undefined}
+          onMouseLeave={collapsed ? hideTooltip : undefined}
+        >
+          {collapsed ? '+' : '+ New project'}
         </button>
         <div className={styles.sidebarDivider} />
         <div className={styles.userRow}>
           <div className={styles.userInfo}>
             <div className={styles.userAvatar}>{userEmail[0].toUpperCase()}</div>
-            <span className={styles.userEmail}>{userEmail}</span>
+            {!collapsed && <span className={styles.userEmail}>{userEmail}</span>}
           </div>
           <button
             className={styles.settingsBtn}
             aria-label="Settings"
             onClick={() => setShowApiKeys(true)}
+            onMouseEnter={e => showTooltip(e, 'Settings')}
+            onMouseLeave={hideTooltip}
           >
             <SettingsIcon />
           </button>
@@ -312,6 +355,7 @@ export function Sidebar({
     </aside>
     </div>
 
+    {hoveredTooltip && <IconTooltip label={hoveredTooltip.label} anchorRect={hoveredTooltip.rect} />}
     {showApiKeys && <ApiKeysModal onClose={() => setShowApiKeys(false)} />}
     </>
   );
