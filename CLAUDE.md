@@ -22,11 +22,11 @@ Each stage produces a file that gates the next stage.
 | 4 | **Analysis** | Engineer agent writes Python; `cmbagent` sandbox executes it; self-healing loop fixes errors iteratively until success | `results.md` + plots + scripts | Stage 5 |
 | 5 | **Paper** | Writing agents draft prose, insert citations, embed plots, apply journal template (LaTeX) | `manuscript.tex` + `.bib` + compiled `.pdf` | Stages 6 & 7 |
 | 6 | **Literature Review** | Searches Semantic Scholar + uploaded references for overlapping prior work | `literature_review.md` | — |
-| 7 | **Referee Report** | Simulates two peer reviewers; surfaces comments and a revision verdict | `referee_report.md` | — |
-| 8 | **Keywords** | Extracts and groups keywords (Primary / Methodology / Domain) from the manuscript | `keywords.md` | ✓ Done |
+| 7 | **Referee Report** | Single-pass LLM review of the compiled manuscript's rendered pages; surfaces comments and a revision verdict | `referee_report.md` | — |
+| 8 | **Keywords** | Extracts keywords from the manuscript as a flat list, optionally matched against a controlled vocabulary (UNESCO / AAS / AAAI) | `keywords.md` | ✓ Done |
 
 ### Stage mechanics
-- **Dual tracks** — every generative stage offers a **Fast** track (single model, immediate) and a **Curated** track (full multi-agent swarm, configurable models).
+- **Dual tracks** — only Idea and Methods offer a real choice between a **Fast** track (single model, immediate) and a **Curated** track (full multi-agent swarm, configurable models). Analysis, Paper, Literature, Referee, and Keywords each have exactly one generation path in the backend (`denario.py`'s `get_results`/`get_paper`/`check_idea`/`referee`/`get_keywords` — no `_fast`/`_cmbagent` variants exist for these); the `track` field on a run request has no effect on them.
 - **Stage 2 adversarial loop** — `idea_maker` (creative) and `idea_hater` (cynical) debate in streaming iterations until the hypothesis stabilises.
 - **Stage 4 self-healing** — if generated Python hits a runtime error, the loop captures the stack trace and refactors the script autonomously until it executes cleanly.
 - **Alternative inputs** — Stage 1 accepts a `.md` dropzone instead of typed text; Stage 3 accepts a dropped methodology file; Stage 4 accepts pre-calculated analytical markdown.
