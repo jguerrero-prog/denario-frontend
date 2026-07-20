@@ -1,12 +1,13 @@
 import { usePipelineStore } from '../store/pipelineStore';
 import { useConfigStore } from '../store/configStore';
 import { api } from '../api/client';
-import { parseBackendResult } from './parsers';
+import { parseBackendResult, parseIdeaLog } from './parsers';
 import type {
   StageId,
   StageResult,
   Track,
   IdeaResultData,
+  IdeaTranscriptRound,
   MethodsResultData,
   AnalysisResultData,
   PaperResultData,
@@ -14,6 +15,22 @@ import type {
   RefereeResultData,
   KeywordsResultData,
 } from '../types/pipeline';
+
+// Idea's adversarial transcript lives in a separate file from idea.md
+// (idea_generation_output/idea.log), served by the generic project file
+// route — so it's fetched and parsed as a best-effort side channel rather
+// than through parseBackendResult's single rawContent/structured shape.
+// Missing/unreachable is expected for mock runs and older projects; fail
+// quietly rather than surface an error for a non-essential enrichment.
+export async function fetchIdeaTranscript(backendId: string): Promise<IdeaTranscriptRound[]> {
+  try {
+    const res = await fetch(api.fileUrl(backendId, 'idea_generation_output/idea.log'));
+    if (!res.ok) return [];
+    return parseIdeaLog(await res.text());
+  } catch {
+    return [];
+  }
+}
 
 // ── Module-level run state ────────────────────────────────────────────────────
 
@@ -71,15 +88,15 @@ export function buildMockResult(stageId: StageId, track: Track): StageResult {
         },
         researchFraming: 'The study targets the climate science domain, focusing on empirical validation within the Python scientific stack (pandas, statsmodels) to maintain full reproducibility. The 2019–2024 observation window captures a post-pandemic emissions recovery period of particular scientific interest, and the period-specific framing aligns with the dataset boundaries available.',
         methodologyTags: ['Time-series correlation analysis', 'OLS · Pearson · Spearman · Scope-constrained'],
-        loopLog: [
-          '> Iteration 1: idea_maker proposed CO₂-temperature correlation (2019–2024)',
-          '> Iteration 1: idea_hater flagged narrow observation window as limitation',
-          '> Iteration 2: idea_maker refined — added scope-constrained framing',
-          '> Iteration 2: idea_hater accepted with note on multi-decadal caution',
-          standard ? '> Iteration 3: planner finalised research question' : '> Iteration 3: idea_maker strengthened statistical methodology rationale',
-          standard ? '> Hypothesis locked · idea.md committed' : '> Iteration 4: formatter standardised output structure',
-          standard ? null : '> Hypothesis locked · idea.md committed',
-        ].filter(Boolean) as string[],
+        transcript: [
+          { round: 1, speaker: 'idea_maker', content: 'Proposed a CO₂-temperature correlation study across the 2019–2024 window.' },
+          { round: 1, speaker: 'idea_hater', content: 'Flagged the narrow 5-year observation window as a limitation for climate-scale claims.' },
+          { round: 2, speaker: 'idea_maker', content: 'Refined the hypothesis with explicit scope-constrained, period-specific framing.' },
+          { round: 2, speaker: 'idea_hater', content: 'Accepted the refined framing, with a note of caution against multi-decadal interpretation.' },
+          ...(standard ? [] : [
+            { round: 3, speaker: 'idea_maker' as const, content: 'Strengthened the statistical methodology rationale behind the Pearson/Spearman/OLS approach.' },
+          ]),
+        ],
         stageOutput: 'idea.md saved · Stage 3 (Methods) unlocked',
         meta: { track: standard ? 'Standard' : 'Rigorous', iterations: standard ? 3 : 4, duration: standard ? '1m 08s' : '6m 42s' },
       } satisfies IdeaResultData,
@@ -240,7 +257,13 @@ export async function startStage(stageId: StageId, track: Track) {
   const { setStageStatus, setStageResult, addMessage, updateMessage, setBackendProjectId } = store;
 
   setStageStatus(stageId, 'running');
-  const msgId = addMessage({ role: 'denario', type: 'status', content: 'Starting…', stageId });
+  // Idea gets the collapsible transcript card instead of a plain cycling
+  // status line — same for both tracks, since both run the idea_maker /
+  // idea_hater debate. Its content stays empty; the card renders live
+  // status + the transcript itself, not message.content.
+  const msgId = stageId === 'idea'
+    ? addMessage({ role: 'denario', type: 'log-card', content: '', stageId })
+    : addMessage({ role: 'denario', type: 'status', content: 'Starting…', stageId });
   statusMsgIds.set(stageId, msgId);
 
   try {
@@ -285,7 +308,9 @@ export async function startStage(stageId: StageId, track: Track) {
       stageId,
       (event) => {
         if (event.type === 'log') {
-          updateMessage(msgId, { content: event.text });
+          // Idea's log-card doesn't display message.content (raw stdout,
+          // not the structured transcript) — skip the write.
+          if (stageId !== 'idea') updateMessage(msgId, { content: event.text });
         } else if (event.type === 'complete') {
           _onStageComplete(stageId, track, event.result?.duration_sec ?? null, msgId, event.result?.content, event.result?.structured);
         } else if (event.type === 'error') {
@@ -354,7 +379,7 @@ function _onStageComplete(
   rawContent?: string | null,
   structured?: Record<string, unknown> | null,
 ) {
-  const { setStageResult, setStageStatus, updateMessage, removeMessage } = usePipelineStore.getState();
+  const { setStageResult, setStageStatus, updateMessage, removeMessage, addMessage } = usePipelineStore.getState();
 
   const mock   = buildMockResult(stageId, track);
   const result = parseBackendResult(stageId, track, rawContent ?? null, durationSec, mock, structured);
@@ -364,6 +389,15 @@ function _onStageComplete(
   setStageStatus(stageId, 'complete');
   statusMsgIds.delete(stageId);
   sseCleanups.delete(stageId);
+
+  if (stageId === 'idea') {
+    const backendId = usePipelineStore.getState().backendProjectId;
+    if (backendId) {
+      fetchIdeaTranscript(backendId).then(transcript => {
+        if (transcript.length > 0) usePipelineStore.getState().setIdeaTranscript(transcript);
+      });
+    }
+  }
 
   // Track was already chosen on the homepage — skip the manual hand-off
   // (Generate Hypothesis button + track prompt) and go straight into
@@ -378,6 +412,19 @@ function _onStageComplete(
     return;
   }
 
+  if (stageId === 'idea') {
+    // Leave the log-card message as-is (it collapses on its own via
+    // IdeaTranscriptCard's collapseTrigger) — the result card is a new
+    // message appended right after it, not a replacement.
+    addMessage({
+      role: 'denario',
+      type: 'result-card',
+      content: stageCompleteMessage(stageId, durationLabel),
+      stageId,
+    });
+    return;
+  }
+
   updateMessage(msgId, {
     type:    'result-card',
     content: stageCompleteMessage(stageId, durationLabel),
@@ -385,13 +432,26 @@ function _onStageComplete(
 }
 
 function _onStageError(stageId: StageId, msgId: string, error: string) {
-  const { updateMessage, setStageError } = usePipelineStore.getState();
+  const { updateMessage, addMessage, setStageError } = usePipelineStore.getState();
   setStageError(stageId, error);
-  updateMessage(msgId, {
-    type: 'result-card',
-    content: 'Stage failed — see the error card below.',
-    stageId,
-  });
+
+  if (stageId === 'idea') {
+    // Same reasoning as _onStageComplete — keep the log-card message intact
+    // (whatever partial transcript exists is still worth seeing) and append
+    // the error as its own card rather than overwriting it.
+    addMessage({
+      role: 'denario',
+      type: 'result-card',
+      content: 'Stage failed — see the error card below.',
+      stageId,
+    });
+  } else {
+    updateMessage(msgId, {
+      type: 'result-card',
+      content: 'Stage failed — see the error card below.',
+      stageId,
+    });
+  }
   statusMsgIds.delete(stageId);
   sseCleanups.delete(stageId);
 }

@@ -7,6 +7,7 @@ import type {
   StageResult,
   Track,
   IdeaResultData,
+  IdeaTranscriptRound,
   MethodsResultData,
   AnalysisResultData,
   PaperResultData,
@@ -43,13 +44,6 @@ function firstParagraph(md: string): string | null {
   );
 }
 
-function extractQuoteLines(md: string): string[] {
-  return md
-    .split('\n')
-    .filter(l => l.startsWith('> '))
-    .map(l => l.slice(2).trim());
-}
-
 // Parse a ## Tags section written by the backend: "A, B, C" → ["A", "B", "C"]
 // Returns null if the section is absent so callers can decide the fallback.
 function extractTagsSection(md: string): string[] | null {
@@ -84,7 +78,6 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
   // If the backend didn't emit a section, leave the field undefined so the UI hides it.
   const framing   = extractSection(bodyContent, 'Research Framing', 'Framing') ?? undefined;
   const scopeBody = extractSection(bodyContent, 'Scope', 'Limitations', 'Scope Note') ?? undefined;
-  const loopLines = extractQuoteLines(content);
   const tags      = extractTagsSection(content) ?? [];
 
   const stageData: IdeaResultData = {
@@ -96,8 +89,6 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
     scopeNote: scopeBody
       ? { title: 'Constraint', body: scopeBody, suggestions: mockData.scopeNote?.suggestions }
       : null,
-    // loopLog — adversarial loop internals are not surfaced in idea.md; hide rather than mock
-    loopLog: loopLines.length > 0 ? loopLines : [],
     // methodologyTags — reuse the same tags the backend generated
     methodologyTags: tags.length > 0 ? tags : [],
     // stageOutput and meta are generic/non-domain — keep from mock
@@ -109,6 +100,33 @@ function parseIdea(content: string, mock: StageResult): Partial<StageResult> {
     tags,
     stageData,
   };
+}
+
+// Parses the raw idea_generation_output/idea.log transcript into structured
+// rounds. cmbagent wraps each idea_maker turn in \begin{IDEA}...\end{IDEA} and
+// each idea_hater turn in \begin{CRITIC}...\end{CRITIC} — a fixed, reliable
+// delimiter format (verified against real runs), so no backend schema change
+// is needed here, just a regex split. idea_maker always leads: it proposes,
+// improves, and finally reports the selected idea, with idea_hater critiquing
+// in between — so a "round" is one idea_maker turn plus whatever idea_hater
+// turn follows it (the final round has no critique once the idea is accepted).
+const TRANSCRIPT_BLOCK_RE = /\\begin\{(IDEA|CRITIC)\}([\s\S]*?)\\end\{\1\}/g;
+
+export function parseIdeaLog(raw: string): IdeaTranscriptRound[] {
+  if (!raw) return [];
+
+  const rounds: IdeaTranscriptRound[] = [];
+  let round = 0;
+
+  for (const match of raw.matchAll(TRANSCRIPT_BLOCK_RE)) {
+    const [, tag, body] = match;
+    const speaker = tag === 'IDEA' ? 'idea_maker' : 'idea_hater';
+    if (speaker === 'idea_maker') round += 1;
+    const content = body.trim();
+    if (content) rounds.push({ round, speaker, content });
+  }
+
+  return rounds;
 }
 
 // The Methods (and Analysis) stage emits schema-constrained structured data —

@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile } from '../types/pipeline';
+import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound } from '../types/pipeline';
 import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
 import { parseBackendResult } from '../utils/parsers';
-import { buildMockResult } from '../utils/stageRunner';
+import { buildMockResult, fetchIdeaTranscript } from '../utils/stageRunner';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
@@ -25,6 +25,7 @@ interface PipelineStore {
   setStageModel: (stageId: StageId, roleKey: string, model: ModelConfig) => void;
   setStageParam: (stageId: StageId, key: string, value: string | number | boolean) => void;
   setStageResult: (stageId: StageId, result: StageResult) => void;
+  setIdeaTranscript: (transcript: IdeaTranscriptRound[]) => void;
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
   unlockNextStage: (stageId: StageId) => void;  // like approveStage, but adds no conversation messages
   setActiveStage: (stageId: StageId) => void;
@@ -292,6 +293,13 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     };
 
     set({ pipeline: hydratedPipeline, backendProjectId: backendProject.id });
+
+    if (updatedStages.idea.status === 'complete' && updatedStages.idea.result) {
+      fetchIdeaTranscript(id).then(transcript => {
+        if (transcript.length > 0) get().setIdeaTranscript(transcript);
+      });
+    }
+
     return id;
   },
 
@@ -339,6 +347,21 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
     set(({ pipeline }) =>
       pipeline ? { pipeline: updateStage(pipeline, stageId, { result }) } : {}
     ),
+
+  // Patches in the adversarial-loop transcript once idea.log has been
+  // fetched and parsed — a side channel from setStageResult since it comes
+  // from a separate file, arriving after the idea result itself is set.
+  setIdeaTranscript: (transcript) =>
+    set(({ pipeline }) => {
+      const stage = pipeline?.stages.idea;
+      if (!pipeline || !stage?.result) return {};
+      const stageData = stage.result.stageData as IdeaResultData;
+      return {
+        pipeline: updateStage(pipeline, 'idea', {
+          result: { ...stage.result, stageData: { ...stageData, transcript } },
+        }),
+      };
+    }),
 
   approveStage: (stageId) =>
     set(({ pipeline }) => {

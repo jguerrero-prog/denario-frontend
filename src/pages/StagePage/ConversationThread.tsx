@@ -6,7 +6,8 @@ import { startStage, stopStage } from '../../utils/stageRunner';
 import { StageResultCard } from './ResultCards/ResultCards';
 import { STAGE_ORDER, STAGE_CONFIG } from '../../config/stageConfig';
 import { ParamSelect, ParamToggle, ParamNumber } from '../../components/molecules/ParamControls/ParamControls';
-import type { Message, StageId } from '../../types/pipeline';
+import { IdeaTranscriptCard } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
+import type { Message, StageId, IdeaResultData } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
 // ── Cycling status ─────────────────────────────────────────────────────────────
@@ -57,6 +58,38 @@ function CyclingStatus({ stageId }: { stageId: StageId }) {
         {statuses[idx]}
       </span>
     </div>
+  );
+}
+
+// The Idea stage's collapsible adversarial-loop transcript. The backend has
+// no live channel for idea.log's structured content (SSE 'log' events are
+// raw captured stdout, not the \begin{IDEA}/\begin{CRITIC} transcript), so
+// the card shows a status while running and swaps to the real parsed
+// transcript once the stage completes and fetchIdeaTranscript() resolves
+// (see stageRunner.ts) — no fabricated live rounds.
+function AdversarialLogCard({ message }: { message: Message }) {
+  const stageId = (message.stageId ?? 'idea') as StageId;
+  const stage = usePipelineStore(s => s.pipeline?.stages[stageId]);
+  const isRunning = stage?.status === 'running';
+  const transcript = (stage?.result?.stageData as IdeaResultData | undefined)?.transcript ?? [];
+  const roundCount = transcript.length > 0 ? transcript[transcript.length - 1].round : 0;
+
+  return (
+    <IdeaTranscriptCard
+      rounds={transcript}
+      defaultCollapsed={!isRunning}
+      collapseTrigger={!isRunning}
+      headerRight={
+        isRunning ? (
+          <>
+            <span className={styles.composeRunningDot} />
+            Agents are cooking…
+          </>
+        ) : (
+          <span>{roundCount > 0 ? `${roundCount} round${roundCount === 1 ? '' : 's'}` : 'Done'}</span>
+        )
+      }
+    />
   );
 }
 
@@ -293,6 +326,12 @@ function MessageRenderer({ message, isFirst }: { message: Message; isFirst: bool
       return (
         <DenarioBubble message={message}>
           <CyclingStatus stageId={(message.stageId ?? 'idea') as StageId} />
+        </DenarioBubble>
+      );
+    case 'log-card':
+      return (
+        <DenarioBubble message={message}>
+          <AdversarialLogCard message={message} />
         </DenarioBubble>
       );
     case 'result-card':

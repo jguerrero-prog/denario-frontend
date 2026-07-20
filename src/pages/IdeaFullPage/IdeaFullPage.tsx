@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../store/pipelineStore';
+import { IdeaTranscriptCard } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
 import type { IdeaResultData } from '../../types/pipeline';
 import styles from './IdeaFullPage.module.css';
 
@@ -112,14 +113,16 @@ export function IdeaFullPage() {
           )}
 
           {/* Adversarial Loop Log */}
-          {data?.loopLog && data.loopLog.length > 0 && (
+          {data?.transcript && data.transcript.length > 0 && (
             <div className={styles.section}>
               <p className={styles.sectionLabel}>Adversarial Loop Log</p>
-              <div className={styles.logBlock}>
-                {data.loopLog.map((line, i) => (
-                  <p key={i} className={styles.logLine}>{line}</p>
-                ))}
-              </div>
+              <IdeaTranscriptCard
+                rounds={data.transcript}
+                defaultCollapsed={true}
+                headerRight={
+                  <span>{data.transcript[data.transcript.length - 1].round} rounds</span>
+                }
+              />
             </div>
           )}
 

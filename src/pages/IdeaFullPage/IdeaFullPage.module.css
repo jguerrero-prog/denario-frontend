@@ -195,28 +195,6 @@
   white-space: nowrap;
 }
 
-/* ── Adversarial Loop Log ───────────────────────────────────────────────────── */
-
-.logBlock {
-  background: var(--color-bg-inset);
-  border: var(--border-default) solid var(--color-border-def);
-  border-left: var(--border-accent) solid var(--color-brand);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.logLine {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--color-brand);
-  line-height: 1;
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
 
 /* ── Back to conversation ──────────────────────────────────────────────────── */
 

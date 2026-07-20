@@ -5,6 +5,7 @@ import { STAGE_CONFIG } from '../../config/stageConfig';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { api } from '../../api/client';
 import { PlotLightbox } from '../../components/PlotLightbox/PlotLightbox';
+import { IdeaTranscriptRounds } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
 import type {
   StageId,
   StageStatus,
@@ -170,6 +171,24 @@ function IdeaReadingView({ result }: { result: StageResult }) {
           </button>
         </>
       )}
+    </div>
+  );
+}
+
+// Discussion tab — the transcript is shown open, no nested collapse (unlike
+// the thread's AdversarialLogCard or IdeaFullPage's collapsed section);
+// this tab exists specifically to read it, so lean on the panel's own scroll.
+function IdeaDiscussionView({ result }: { result: StageResult }) {
+  const data = result.stageData as IdeaResultData | undefined;
+  const rounds = data?.transcript ?? [];
+  const roundCount = rounds.length > 0 ? rounds[rounds.length - 1].round : 0;
+
+  return (
+    <div className={styles.readingView}>
+      {roundCount > 0 && (
+        <p className={styles.readingMeta}>{roundCount} round{roundCount === 1 ? '' : 's'} · idea_maker ↔ idea_hater</p>
+      )}
+      <IdeaTranscriptRounds rounds={rounds} />
     </div>
   );
 }
@@ -400,8 +419,10 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
   const [selected, setSelected]     = useState<StageId>(activeStageId);
   const [panelWidth, setPanelWidth] = useState(PANEL_DEFAULT);
   const [dragging, setDragging]     = useState(false);
+  const [ideaTab, setIdeaTab]       = useState<'overview' | 'discussion'>('overview');
 
   useEffect(() => { setSelected(activeStageId); }, [activeStageId]);
+  useEffect(() => { setIdeaTab('overview'); }, [selected]);
 
   // ── Drag-to-resize ──────────────────────────────────────────────────────────
   const startResize = useCallback((e: React.MouseEvent) => {
@@ -433,6 +454,11 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
   const stage  = pipeline.stages[selected];
   const result = stage?.result;
   const file   = result?.file;
+
+  const ideaTranscript = selected === 'idea'
+    ? (result?.stageData as IdeaResultData | undefined)?.transcript
+    : undefined;
+  const hasIdeaDiscussion = !!ideaTranscript && ideaTranscript.length > 0;
 
   const stageStatuses = Object.fromEntries(
     STAGE_ORDER.map(sid => [sid, pipeline.stages[sid]?.status ?? 'locked'])
@@ -474,9 +500,29 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
 
           {/* Content */}
           <div className={styles.panelDividerLine} />
+          {hasIdeaDiscussion && (
+            <div className={styles.panelTabBar}>
+              <button
+                className={`${styles.ideaTab} ${ideaTab === 'overview' ? styles.ideaTabActive : ''}`}
+                onClick={() => setIdeaTab('overview')}
+              >
+                Overview
+              </button>
+              <button
+                className={`${styles.ideaTab} ${ideaTab === 'discussion' ? styles.ideaTabActive : ''}`}
+                onClick={() => setIdeaTab('discussion')}
+              >
+                Discussion
+              </button>
+            </div>
+          )}
           <div className={styles.panelContent}>
             {result ? (
-              <PanelReadingView stageId={selected} />
+              hasIdeaDiscussion && ideaTab === 'discussion' ? (
+                <IdeaDiscussionView result={result} />
+              ) : (
+                <PanelReadingView stageId={selected} />
+              )
             ) : (
               <EmptyState status={stage?.status ?? 'locked'} />
             )}

@@ -1,0 +1,143 @@
+/* ── Collapsible card chrome ── */
+
+.card {
+  border: 1px solid var(--color-border-card);
+  border-radius: 12px;
+  background: var(--color-bg-card);
+  overflow: hidden;
+}
+
+.header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  color: var(--color-text-mut);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.chevronOpen {
+  transform: rotate(90deg);
+}
+
+.title {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-pri);
+}
+
+.headerRight {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--color-text-sec);
+}
+
+.waiting {
+  padding: 0 var(--space-4) var(--space-3);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--color-text-mut);
+}
+
+/* ── Rounds list ──────────────────────────────────────────────────────────────
+   Three-tier spacing, tightest to loosest, so the layout itself signals
+   structure (information scent) without relying on color:
+   - .entry   (chip → its own paragraph(s)): one voice, tight   — space-2
+   - .round   (idea_maker turn → idea_hater turn, same round):  medium — space-4
+   - .rounds  (round → round):        clearly separate exchanges — space-6,
+     reinforced by .roundDivider sitting in that gap
+*/
+
+.rounds {
+  padding: var(--space-2) var(--space-4) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.round {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.roundDivider {
+  border-top: 1px solid var(--color-border-def);
+}
+
+.chip {
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: #2563EB;
+  color: #FFFFFF;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+
+.entryText {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-pri);
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.heading2 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--color-text-pri);
+  margin: var(--space-1) 0 0;
+}
+
+.heading3 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-sec);
+  margin: var(--space-1) 0 0;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: #EAEAEA;
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--color-text-pri);
+}
+
+.math {
+  font-family: var(--font-mono);
+  font-style: italic;
+  font-size: 0.92em;
+  color: var(--color-text-pri);
+}

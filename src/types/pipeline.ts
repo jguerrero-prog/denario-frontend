@@ -28,6 +28,7 @@ export type MessageType =
   | 'text'                 // plain chat bubble
   | 'stage-prompt'         // Denario opens a stage with action choices
   | 'status'               // ephemeral cycling status (running state)
+  | 'log-card'             // collapsible adversarial-loop transcript (Idea stage)
   | 'result-card'          // stage output (idea.md, method.md, etc.)
   | 'suggestion-followup'  // Denario elaborates on a clicked scope-constraint suggestion
   | 'system';              // pipeline events ("Moving to Stage 2…")
@@ -53,13 +54,19 @@ export interface IdeaSuggestion {
   actionLabel?: string;     // action button label on that follow-up turn (actionable only)
 }
 
+export interface IdeaTranscriptRound {
+  round: number;
+  speaker: 'idea_maker' | 'idea_hater';
+  content: string;
+}
+
 export interface IdeaResultData {
   kind: 'idea';
   hypothesis: string;
   scopeNote?: { title: string; body: string; suggestions?: IdeaSuggestion[] } | null;
   researchFraming?: string;
   methodologyTags: string[];
-  loopLog: string[];
+  transcript: IdeaTranscriptRound[];
   stageOutput: string;
   meta: { track: string; iterations: number; duration: string };
 }
