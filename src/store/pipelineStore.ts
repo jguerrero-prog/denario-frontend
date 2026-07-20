@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound } from '../types/pipeline';
+import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound, MethodsResultData, MethodsPlanningTurn, MethodsExecutionStep } from '../types/pipeline';
 import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
 import { parseBackendResult } from '../utils/parsers';
-import { buildMockResult, fetchIdeaTranscript } from '../utils/stageRunner';
+import { buildMockResult, fetchIdeaTranscript, fetchMethodsLog } from '../utils/stageRunner';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
@@ -26,6 +26,7 @@ interface PipelineStore {
   setStageParam: (stageId: StageId, key: string, value: string | number | boolean) => void;
   setStageResult: (stageId: StageId, result: StageResult) => void;
   setIdeaTranscript: (transcript: IdeaTranscriptRound[]) => void;
+  setMethodsLog: (planningLog: MethodsPlanningTurn[], executionLog: MethodsExecutionStep[]) => void;
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
   unlockNextStage: (stageId: StageId) => void;  // like approveStage, but adds no conversation messages
   setActiveStage: (stageId: StageId) => void;
@@ -300,6 +301,12 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       });
     }
 
+    if (updatedStages.methods.status === 'complete' && updatedStages.methods.result) {
+      fetchMethodsLog(id).then(({ planningLog, executionLog }) => {
+        if (planningLog.length > 0 || executionLog.length > 0) get().setMethodsLog(planningLog, executionLog);
+      });
+    }
+
     return id;
   },
 
@@ -359,6 +366,21 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       return {
         pipeline: updateStage(pipeline, 'idea', {
           result: { ...stage.result, stageData: { ...stageData, transcript } },
+        }),
+      };
+    }),
+
+  // Same reasoning as setIdeaTranscript — Methods' Rigorous-track log comes
+  // from several separate JSON files, arriving after the methods result
+  // itself is set.
+  setMethodsLog: (planningLog, executionLog) =>
+    set(({ pipeline }) => {
+      const stage = pipeline?.stages.methods;
+      if (!pipeline || !stage?.result) return {};
+      const stageData = stage.result.stageData as MethodsResultData;
+      return {
+        pipeline: updateStage(pipeline, 'methods', {
+          result: { ...stage.result, stageData: { ...stageData, planningLog, executionLog } },
         }),
       };
     }),

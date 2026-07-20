@@ -9,6 +9,8 @@ import type {
   IdeaResultData,
   IdeaTranscriptRound,
   MethodsResultData,
+  MethodsPlanningTurn,
+  MethodsExecutionStep,
   AnalysisResultData,
   PaperResultData,
   LiteratureResultData,
@@ -127,6 +129,44 @@ export function parseIdeaLog(raw: string): IdeaTranscriptRound[] {
   }
 
   return rounds;
+}
+
+// Methods' Rigorous-track reasoning log — see REASONING_LOG_TICKETS.md.
+// Unlike idea.log's fixed text delimiters, this comes from cmbagent's own
+// chat-history JSON files (raw AG2/autogen message lists), one per phase:
+// planning/chats/chat_output_planning.json (the planner/plan_reviewer debate)
+// and control/chats/chat_output_researcher_step_N.json (one file per plan
+// step). Each is a flat array of `{name, content, timestamp, cost}` entries;
+// most entries are orchestration bookkeeping (`control`, `_Group_Tool_Executor`,
+// `*_response_formatter`, `*_executor`, `terminator`) with no real content —
+// only entries from the named agent that actually did the thinking matter.
+interface RawCmbagentChatEntry {
+  name: string;
+  content: string | null;
+}
+
+export function parseMethodsPlanningLog(raw: RawCmbagentChatEntry[]): MethodsPlanningTurn[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((e): e is RawCmbagentChatEntry & { content: string } =>
+      (e.name === 'planner' || e.name === 'plan_reviewer') && !!e.content?.trim()
+    )
+    .map(e => ({ speaker: e.name as 'planner' | 'plan_reviewer', content: e.content.trim() }));
+}
+
+// Each step's chat file is self-contained and always has exactly one
+// `researcher`-named entry with the real answer (confirmed against a real
+// run) — everything else in the file is the step briefing, the JSON-echoed
+// formatter output, save confirmations, and session bookkeeping.
+export function parseMethodsStepLog(
+  raw: RawCmbagentChatEntry[],
+  step: number,
+  title: string,
+): MethodsExecutionStep | null {
+  if (!Array.isArray(raw)) return null;
+  const researcherEntry = raw.find(e => e.name === 'researcher' && e.content?.trim());
+  if (!researcherEntry?.content) return null;
+  return { step, title, content: researcherEntry.content.trim() };
 }
 
 // The Methods (and Analysis) stage emits schema-constrained structured data —

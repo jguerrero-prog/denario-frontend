@@ -1,7 +1,7 @@
 import { usePipelineStore } from '../store/pipelineStore';
 import { useConfigStore } from '../store/configStore';
 import { api } from '../api/client';
-import { parseBackendResult, parseIdeaLog } from './parsers';
+import { parseBackendResult, parseIdeaLog, parseMethodsPlanningLog, parseMethodsStepLog } from './parsers';
 import type {
   StageId,
   StageResult,
@@ -9,6 +9,8 @@ import type {
   IdeaResultData,
   IdeaTranscriptRound,
   MethodsResultData,
+  MethodsPlanningTurn,
+  MethodsExecutionStep,
   AnalysisResultData,
   PaperResultData,
   LiteratureResultData,
@@ -29,6 +31,45 @@ export async function fetchIdeaTranscript(backendId: string): Promise<IdeaTransc
     return parseIdeaLog(await res.text());
   } catch {
     return [];
+  }
+}
+
+// Methods' Rigorous-track reasoning log (see REASONING_LOG_TICKETS.md) —
+// unlike idea.log, this is Rigorous-only: Standard/fast Methods generation
+// (langgraph_agents/methods.py) writes no log at all, confirmed against real
+// runs, so a 404 on final_plan.json here is the expected, normal case for a
+// Standard-track project, not an error. Real directory is singular
+// `method_generation_output`, not `methods_generation_output`.
+const METHODS_LOG_EMPTY = { planningLog: [] as MethodsPlanningTurn[], executionLog: [] as MethodsExecutionStep[] };
+
+export async function fetchMethodsLog(
+  backendId: string,
+): Promise<{ planningLog: MethodsPlanningTurn[]; executionLog: MethodsExecutionStep[] }> {
+  try {
+    const planRes = await fetch(api.fileUrl(backendId, 'method_generation_output/planning/final_plan.json'));
+    if (!planRes.ok) return METHODS_LOG_EMPTY;
+    const finalPlan = await planRes.json();
+    const subTasks: { sub_task: string }[] = Array.isArray(finalPlan?.sub_tasks) ? finalPlan.sub_tasks : [];
+    if (subTasks.length === 0) return METHODS_LOG_EMPTY;
+
+    const planningRes = await fetch(api.fileUrl(backendId, 'method_generation_output/planning/chats/chat_output_planning.json'));
+    const planningLog = planningRes.ok ? parseMethodsPlanningLog(await planningRes.json()) : [];
+
+    const stepResults = await Promise.all(
+      subTasks.map(async (task, i) => {
+        const stepNum = i + 1;
+        const stepRes = await fetch(
+          api.fileUrl(backendId, `method_generation_output/control/chats/chat_output_researcher_step_${stepNum}.json`)
+        );
+        if (!stepRes.ok) return null;
+        return parseMethodsStepLog(await stepRes.json(), stepNum, task.sub_task);
+      })
+    );
+    const executionLog = stepResults.filter((s): s is MethodsExecutionStep => s !== null);
+
+    return { planningLog, executionLog };
+  } catch {
+    return METHODS_LOG_EMPTY;
   }
 }
 
@@ -165,6 +206,17 @@ export function buildMockResult(stageId: StageId, track: Track): StageResult {
             ],
           },
         ],
+        // Rigorous-track-only reasoning log (see REASONING_LOG_TICKETS.md) —
+        // empty for Standard/fast, since the real backend has confirmed zero
+        // log output for that track.
+        planningLog: standard ? [] : [
+          { speaker: 'planner', content: 'Proposed a 2-step plan: data preparation/alignment, then correlation analysis and export.' },
+          { speaker: 'plan_reviewer', content: 'Recommended adding an explicit stationarity check before running OLS on the time series.' },
+        ],
+        executionLog: standard ? [] : [
+          { step: 1, title: 'Data preparation and alignment', content: 'Loaded and resampled both series to monthly frequency, normalising CO₂ as a deviation from a 415ppm baseline.' },
+          { step: 2, title: 'Correlation analysis and export', content: 'Ran Pearson/Spearman correlation and OLS regression, exporting the summary statistics and plots.' },
+        ],
       } satisfies MethodsResultData,
     },
     analysis: {
@@ -248,6 +300,17 @@ export function buildMockResult(stageId: StageId, track: Track): StageResult {
   return results[stageId];
 }
 
+// Which (stage, track) combinations get the collapsible log-card message
+// instead of a plain cycling status line. Idea: both tracks (idea_maker/
+// idea_hater runs either way). Methods: Rigorous only — Standard/fast
+// Methods generation writes no reasoning log at all, confirmed against real
+// runs, so showing an anticipatory card there would just sit empty forever.
+function hasLogCard(stageId: StageId, track: Track): boolean {
+  if (stageId === 'idea') return true;
+  if (stageId === 'methods') return track === 'rigorous';
+  return false;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function startStage(stageId: StageId, track: Track) {
@@ -257,11 +320,9 @@ export async function startStage(stageId: StageId, track: Track) {
   const { setStageStatus, setStageResult, addMessage, updateMessage, setBackendProjectId } = store;
 
   setStageStatus(stageId, 'running');
-  // Idea gets the collapsible transcript card instead of a plain cycling
-  // status line — same for both tracks, since both run the idea_maker /
-  // idea_hater debate. Its content stays empty; the card renders live
-  // status + the transcript itself, not message.content.
-  const msgId = stageId === 'idea'
+  // Its content stays empty; the card renders live status + the log itself,
+  // not message.content.
+  const msgId = hasLogCard(stageId, track)
     ? addMessage({ role: 'denario', type: 'log-card', content: '', stageId })
     : addMessage({ role: 'denario', type: 'status', content: 'Starting…', stageId });
   statusMsgIds.set(stageId, msgId);
@@ -308,9 +369,9 @@ export async function startStage(stageId: StageId, track: Track) {
       stageId,
       (event) => {
         if (event.type === 'log') {
-          // Idea's log-card doesn't display message.content (raw stdout,
-          // not the structured transcript) — skip the write.
-          if (stageId !== 'idea') updateMessage(msgId, { content: event.text });
+          // A log-card message doesn't display message.content (raw stdout,
+          // not the structured log) — skip the write.
+          if (!hasLogCard(stageId, track)) updateMessage(msgId, { content: event.text });
         } else if (event.type === 'complete') {
           _onStageComplete(stageId, track, event.result?.duration_sec ?? null, msgId, event.result?.content, event.result?.structured);
         } else if (event.type === 'error') {
@@ -399,6 +460,17 @@ function _onStageComplete(
     }
   }
 
+  if (stageId === 'methods') {
+    const backendId = usePipelineStore.getState().backendProjectId;
+    if (backendId) {
+      fetchMethodsLog(backendId).then(({ planningLog, executionLog }) => {
+        if (planningLog.length > 0 || executionLog.length > 0) {
+          usePipelineStore.getState().setMethodsLog(planningLog, executionLog);
+        }
+      });
+    }
+  }
+
   // Track was already chosen on the homepage — skip the manual hand-off
   // (Generate Hypothesis button + track prompt) and go straight into
   // hypothesis generation, with no intermediate confirmation message.
@@ -412,10 +484,10 @@ function _onStageComplete(
     return;
   }
 
-  if (stageId === 'idea') {
-    // Leave the log-card message as-is (it collapses on its own via
-    // IdeaTranscriptCard's collapseTrigger) — the result card is a new
-    // message appended right after it, not a replacement.
+  if (hasLogCard(stageId, track)) {
+    // Leave the log-card message as-is (it collapses on its own via its
+    // collapseTrigger) — the result card is a new message appended right
+    // after it, not a replacement.
     addMessage({
       role: 'denario',
       type: 'result-card',
@@ -435,9 +507,12 @@ function _onStageError(stageId: StageId, msgId: string, error: string) {
   const { updateMessage, addMessage, setStageError } = usePipelineStore.getState();
   setStageError(stageId, error);
 
-  if (stageId === 'idea') {
+  // track isn't a param here (unlike _onStageComplete) — read it back from
+  // the stage, set by setStageTrack before startStage ever runs.
+  const track = usePipelineStore.getState().pipeline?.stages[stageId]?.track;
+  if (track && hasLogCard(stageId, track)) {
     // Same reasoning as _onStageComplete — keep the log-card message intact
-    // (whatever partial transcript exists is still worth seeing) and append
+    // (whatever partial log exists is still worth seeing) and append
     // the error as its own card rather than overwriting it.
     addMessage({
       role: 'denario',

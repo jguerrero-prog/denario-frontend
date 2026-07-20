@@ -1,5 +1,22 @@
 # Backlog
 
+## More Methods cleaning
+
+**Status:** Open
+**Found:** 2026-07-20, while building and iterating on Methods' Rigorous-track reasoning log (see `REASONING_LOG_TICKETS.md` for the shipped feature)
+
+**Problem:** The feature works and is verified against real data, but several rough edges piled up during iteration that are worth a dedicated pass rather than continuing to patch one-off as new real content surfaces new shapes. Pivoting away from this for now — punch list to pick back up later:
+
+1. **The bare-label heuristic (`BARE_LABEL_RE`/`DROP_LABEL_RE` in `src/utils/liteMarkdown.tsx`) is pattern-matching against real examples seen so far ("Step N:", "instructions:", "bullet points:"), not a guarantee.** A future Rigorous run could have the planner/researcher phrase structural labels differently (e.g. "Step 1 (Data Prep):" with a trailing parenthetical, which won't match the current regex) and the old literal-bullet symptom would reappear for that specific wording. Worth revisiting once a few more real runs exist to see what actually recurs vs. what was a one-off.
+2. **Never verified the live-backend browser flow end-to-end for Methods.** All UI verification this session was either mock data or a standalone Node check of the parser against real files on disk — the actual SSE-streamed live Rigorous run through a real browser was blocked by the backend's CORS allowlist (`DenarioBackend/api/main.py:37`, fixed to ports 5173-5175/4173/3000) not including whatever port the dev server happened to bind to. Same class of issue noted in `project_denario_status` memory for Idea's real-data check.
+3. **Idea's own Rigorous-track gap is still open.** Idea's shipped transcript feature only reads `idea_generation_output/idea.log` (a Fast-track-only artifact — confirmed via source, not cmbagent). A Rigorous-track Idea run would produce the same `planning/`+`control/chats/` structure Methods uses, via the same underlying cmbagent call, but nothing reads it for Idea today. Directly blocks generalizing the reasoning-log pattern further.
+4. **List rendering is visual-only, not semantic.** `renderLiteMarkdown`'s nested list output is a flat stack of styled `<div>`s with inline `paddingLeft`, not real `<ol>/<ul>/<li>` — no list semantics for accessibility tooling, no depth cap (a pathologically deep nesting level would just keep indenting, unbounded, inside the Right Panel's ~300-640px width).
+5. **The bare-label → bold conversion synthesizes markdown on the fly** (`text: \`**${bareLabel[1]}:**\``) rather than being a first-class rendering concept — works, but is a bit implicit; a future reader of this code might not immediately see why a plain string gets wrapped in `**` at that specific spot.
+6. **Right Panel's Overview/Discussion pattern only knows about Idea and Methods.** `hasDiscussion` in `RightPanel.tsx` explicitly checks both stage shapes by name — extending to other stages (Analysis has the richest confirmed log of all per `project_denario_future_work` memory) means touching that conditional again, not a drop-in.
+7. **Pre-existing, unrelated gap in a file this work touched:** `MethodsFullPage.tsx` (which gained the new "Reasoning Log" section today) still has the `useHydratedPipeline` gap described in the ticket above this one — worth fixing both in the same pass if either is picked up.
+
+**Risk:** Low — none of this blocks the shipped feature, which works and is verified; it's about hardening against future real content shapes and closing verification gaps, not a known active bug.
+
 ## Extend `useHydratedPipeline` fix to Idea/Methods/Paper full pages
 
 **Status:** Open

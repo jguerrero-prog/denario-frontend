@@ -1,6 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { InlineMarkdown } from '../../utils/MarkdownBlock';
+import { MethodsLogCard } from '../../components/molecules/MethodsLog/MethodsLog';
 import type { MethodsResultData } from '../../types/pipeline';
 import styles from './MethodsFullPage.module.css';
 
@@ -38,6 +39,9 @@ export function MethodsFullPage() {
   const file = result?.file ?? 'methods.md';
   const data = result?.stageData as MethodsResultData | undefined;
   const sections = data?.sections ?? [];
+  const planningLog = data?.planningLog ?? [];
+  const executionLog = data?.executionLog ?? [];
+  const hasLog = planningLog.length > 0 || executionLog.length > 0;
 
   function handleBack() {
     navigate(`/project/${projectId}/stage/${stageId}`);
@@ -112,6 +116,19 @@ export function MethodsFullPage() {
               </div>
             </div>
           ))}
+
+          {/* Reasoning Log (Rigorous track only) */}
+          {hasLog && (
+            <div className={styles.section}>
+              <p className={styles.sectionLabel}>Reasoning Log</p>
+              <MethodsLogCard
+                planningLog={planningLog}
+                executionLog={executionLog}
+                defaultCollapsed={true}
+                headerRight={<span>{executionLog.length} step{executionLog.length === 1 ? '' : 's'}</span>}
+              />
+            </div>
+          )}
 
           {/* Back to conversation */}
           <div className={styles.section}>

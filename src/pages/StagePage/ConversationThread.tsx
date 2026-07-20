@@ -7,7 +7,8 @@ import { StageResultCard } from './ResultCards/ResultCards';
 import { STAGE_ORDER, STAGE_CONFIG } from '../../config/stageConfig';
 import { ParamSelect, ParamToggle, ParamNumber } from '../../components/molecules/ParamControls/ParamControls';
 import { IdeaTranscriptCard } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
-import type { Message, StageId, IdeaResultData } from '../../types/pipeline';
+import { MethodsLogCard } from '../../components/molecules/MethodsLog/MethodsLog';
+import type { Message, StageId, IdeaResultData, MethodsResultData } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
 // ── Cycling status ─────────────────────────────────────────────────────────────
@@ -87,6 +88,39 @@ function AdversarialLogCard({ message }: { message: Message }) {
           </>
         ) : (
           <span>{roundCount > 0 ? `${roundCount} round${roundCount === 1 ? '' : 's'}` : 'Done'}</span>
+        )
+      }
+    />
+  );
+}
+
+// Methods' Rigorous-track reasoning log — same "status while running, real
+// content once fetchMethodsLog() resolves on completion" pattern as Idea's
+// card above. Only ever mounted when the message type routes here, which
+// only happens for a Rigorous-track Methods run (see hasLogCard() in
+// stageRunner.ts) — Standard/fast Methods has no log to show.
+function MethodsLogCardMessage({ message }: { message: Message }) {
+  const stageId = (message.stageId ?? 'methods') as StageId;
+  const stage = usePipelineStore(s => s.pipeline?.stages[stageId]);
+  const isRunning = stage?.status === 'running';
+  const data = stage?.result?.stageData as MethodsResultData | undefined;
+  const planningLog = data?.planningLog ?? [];
+  const executionLog = data?.executionLog ?? [];
+
+  return (
+    <MethodsLogCard
+      planningLog={planningLog}
+      executionLog={executionLog}
+      defaultCollapsed={!isRunning}
+      collapseTrigger={!isRunning}
+      headerRight={
+        isRunning ? (
+          <>
+            <span className={styles.composeRunningDot} />
+            Agents are cooking…
+          </>
+        ) : (
+          <span>{executionLog.length > 0 ? `${executionLog.length} step${executionLog.length === 1 ? '' : 's'}` : 'Done'}</span>
         )
       }
     />
@@ -331,7 +365,9 @@ function MessageRenderer({ message, isFirst }: { message: Message; isFirst: bool
     case 'log-card':
       return (
         <DenarioBubble message={message}>
-          <AdversarialLogCard message={message} />
+          {message.stageId === 'methods'
+            ? <MethodsLogCardMessage message={message} />
+            : <AdversarialLogCard message={message} />}
         </DenarioBubble>
       );
     case 'result-card':

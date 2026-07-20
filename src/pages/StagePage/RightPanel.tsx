@@ -6,6 +6,7 @@ import { usePipelineStore } from '../../store/pipelineStore';
 import { api } from '../../api/client';
 import { PlotLightbox } from '../../components/PlotLightbox/PlotLightbox';
 import { IdeaTranscriptRounds } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
+import { MethodsLogSections } from '../../components/molecules/MethodsLog/MethodsLog';
 import type {
   StageId,
   StageStatus,
@@ -189,6 +190,18 @@ function IdeaDiscussionView({ result }: { result: StageResult }) {
         <p className={styles.readingMeta}>{roundCount} round{roundCount === 1 ? '' : 's'} · idea_maker ↔ idea_hater</p>
       )}
       <IdeaTranscriptRounds rounds={rounds} />
+    </div>
+  );
+}
+
+// Same "no nested collapse, lean on panel scroll" rule as IdeaDiscussionView
+// — this tab is the dedicated place to read it. Two labeled sections
+// (Planning, Execution) instead of one flat list, per REASONING_LOG_TICKETS.md.
+function MethodsDiscussionView({ result }: { result: StageResult }) {
+  const data = result.stageData as MethodsResultData | undefined;
+  return (
+    <div className={styles.readingView}>
+      <MethodsLogSections planningLog={data?.planningLog ?? []} executionLog={data?.executionLog ?? []} />
     </div>
   );
 }
@@ -419,10 +432,10 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
   const [selected, setSelected]     = useState<StageId>(activeStageId);
   const [panelWidth, setPanelWidth] = useState(PANEL_DEFAULT);
   const [dragging, setDragging]     = useState(false);
-  const [ideaTab, setIdeaTab]       = useState<'overview' | 'discussion'>('overview');
+  const [discussionTab, setDiscussionTab] = useState<'overview' | 'discussion'>('overview');
 
   useEffect(() => { setSelected(activeStageId); }, [activeStageId]);
-  useEffect(() => { setIdeaTab('overview'); }, [selected]);
+  useEffect(() => { setDiscussionTab('overview'); }, [selected]);
 
   // ── Drag-to-resize ──────────────────────────────────────────────────────────
   const startResize = useCallback((e: React.MouseEvent) => {
@@ -458,7 +471,12 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
   const ideaTranscript = selected === 'idea'
     ? (result?.stageData as IdeaResultData | undefined)?.transcript
     : undefined;
-  const hasIdeaDiscussion = !!ideaTranscript && ideaTranscript.length > 0;
+  const methodsLogData = selected === 'methods'
+    ? (result?.stageData as MethodsResultData | undefined)
+    : undefined;
+  const hasDiscussion =
+    (!!ideaTranscript && ideaTranscript.length > 0) ||
+    (!!methodsLogData && (methodsLogData.planningLog.length > 0 || methodsLogData.executionLog.length > 0));
 
   const stageStatuses = Object.fromEntries(
     STAGE_ORDER.map(sid => [sid, pipeline.stages[sid]?.status ?? 'locked'])
@@ -500,17 +518,17 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
 
           {/* Content */}
           <div className={styles.panelDividerLine} />
-          {hasIdeaDiscussion && (
+          {hasDiscussion && (
             <div className={styles.panelTabBar}>
               <button
-                className={`${styles.ideaTab} ${ideaTab === 'overview' ? styles.ideaTabActive : ''}`}
-                onClick={() => setIdeaTab('overview')}
+                className={`${styles.ideaTab} ${discussionTab === 'overview' ? styles.ideaTabActive : ''}`}
+                onClick={() => setDiscussionTab('overview')}
               >
                 Overview
               </button>
               <button
-                className={`${styles.ideaTab} ${ideaTab === 'discussion' ? styles.ideaTabActive : ''}`}
-                onClick={() => setIdeaTab('discussion')}
+                className={`${styles.ideaTab} ${discussionTab === 'discussion' ? styles.ideaTabActive : ''}`}
+                onClick={() => setDiscussionTab('discussion')}
               >
                 Discussion
               </button>
@@ -518,8 +536,10 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
           )}
           <div className={styles.panelContent}>
             {result ? (
-              hasIdeaDiscussion && ideaTab === 'discussion' ? (
-                <IdeaDiscussionView result={result} />
+              hasDiscussion && discussionTab === 'discussion' ? (
+                selected === 'methods'
+                  ? <MethodsDiscussionView result={result} />
+                  : <IdeaDiscussionView result={result} />
               ) : (
                 <PanelReadingView stageId={selected} />
               )

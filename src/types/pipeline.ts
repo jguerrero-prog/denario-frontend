@@ -89,10 +89,28 @@ export interface MethodSection {
   substeps: MethodSubStep[];
 }
 
+// Rigorous-track-only reasoning log — see REASONING_LOG_TICKETS.md. Two
+// structurally different sources, not one flat transcript like Idea's:
+// a short planner/plan_reviewer debate over the plan itself, then a
+// sequential list of steps where a single `researcher` agent executes each
+// planned sub-task in turn (no second voice, no critique).
+export interface MethodsPlanningTurn {
+  speaker: 'planner' | 'plan_reviewer';
+  content: string;
+}
+
+export interface MethodsExecutionStep {
+  step: number;
+  title: string;    // the plan's sub_task text for this step (final_plan.json)
+  content: string;  // the researcher agent's real markdown answer for this step
+}
+
 export interface MethodsResultData {
   kind: 'methods';
   overview: string;
   sections: MethodSection[];
+  planningLog: MethodsPlanningTurn[];
+  executionLog: MethodsExecutionStep[];
 }
 
 export interface ResultTable {
