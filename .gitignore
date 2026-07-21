@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local runtime project data (saved researcher projects, not source)
+/Denario/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
