@@ -1,10 +1,13 @@
-// Inline-only formatting for **bold** and `code` spans, plus one block-level
-// pattern for "* "/"- " bullet lines. Methods content arrives as
-// schema-constrained structured fields (label/body/points) with no freeform
-// block structure, but Referee/Literature bodies are real LLM prose that do
-// contain sub-bullets — without this, a "* item" line renders as a literal
-// asterisk. Deliberately minimal (no headings/nesting/numbered lists — see
-// liteMarkdown.tsx for that richer case, used for agent transcript logs).
+// Inline-only formatting for **bold**, *italic*, `code`, and inline $math$
+// spans, plus one block-level pattern for "* "/"- " bullet lines. Methods
+// content arrives as schema-constrained structured fields (label/body/points)
+// with no freeform block structure, but Referee/Literature bodies are real
+// LLM prose that use all of these — without them, a "* item" line, a
+// *emphasized* word, or a $\lambda_1 = 3.24$ expression render as literal
+// asterisks/dollar signs. Deliberately minimal (no headings/nesting/numbered
+// lists — see liteMarkdown.tsx for that richer case, used for agent
+// transcript logs). ** is checked before single * in the alternation so a
+// bold span isn't split into two italic delimiters.
 
 import styles from './MarkdownBlock.module.css';
 
@@ -14,7 +17,7 @@ interface Props {
 }
 
 export function InlineMarkdown({ text, className }: Props) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\$[^$]+\$|\*[^*]+\*)/);
   return (
     <span className={className}>
       {parts.map((p, i) => {
@@ -23,6 +26,12 @@ export function InlineMarkdown({ text, className }: Props) {
         }
         if (p.startsWith('`') && p.endsWith('`')) {
           return <code key={i} className={styles.code}>{p.slice(1, -1)}</code>;
+        }
+        if (p.startsWith('$') && p.endsWith('$')) {
+          return <span key={i} className={styles.math}>{p.slice(1, -1)}</span>;
+        }
+        if (p.startsWith('*') && p.endsWith('*')) {
+          return <em key={i}>{p.slice(1, -1)}</em>;
         }
         return <span key={i}>{p}</span>;
       })}
