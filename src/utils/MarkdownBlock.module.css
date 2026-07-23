@@ -6,3 +6,12 @@
   padding: 1px 5px;
   color: var(--color-text-pri);
 }
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style-type: disc;
+  margin: 0;
+  padding-left: 20px;
+}

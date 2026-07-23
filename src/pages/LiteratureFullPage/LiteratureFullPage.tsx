@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
-import { InlineMarkdown } from '../../utils/MarkdownBlock';
+import { InlineMarkdown, MarkdownBlock } from '../../utils/MarkdownBlock';
 import type { LiteratureResultData, LiteraturePaper } from '../../types/pipeline';
 import styles from './LiteratureFullPage.module.css';
 
@@ -113,7 +113,7 @@ export function LiteratureFullPage() {
                 {structured.assessment && (
                   <div className={styles.section}>
                     <p className={styles.sectionLabel}>Novelty Assessment</p>
-                    <p className={styles.prose}><InlineMarkdown text={structured.assessment} /></p>
+                    <MarkdownBlock className={styles.prose} text={structured.assessment} />
                   </div>
                 )}
 
@@ -129,7 +129,7 @@ export function LiteratureFullPage() {
                 {structured.conclusion && (
                   <div className={styles.section}>
                     <p className={styles.sectionLabel}>Conclusion</p>
-                    <p className={styles.prose}><InlineMarkdown text={structured.conclusion} /></p>
+                    <MarkdownBlock className={styles.prose} text={structured.conclusion} />
                   </div>
                 )}
               </>

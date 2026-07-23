@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
-import { InlineMarkdown } from '../../utils/MarkdownBlock';
+import { MarkdownBlock } from '../../utils/MarkdownBlock';
 import type { RefereeResultData, RefereeSection } from '../../types/pipeline';
 import styles from './RefereeFullPage.module.css';
 
@@ -16,14 +16,14 @@ function SectionBlock({ section }: { section: RefereeSection }) {
     <div className={styles.section}>
       <p className={styles.sectionLabel}>{section.title}</p>
       {section.body && (
-        <p className={styles.prose}><InlineMarkdown text={section.body} /></p>
+        <MarkdownBlock className={styles.prose} text={section.body} />
       )}
       {section.points.length > 0 && (
         <div className={styles.pointStack}>
           {section.points.map((point, i) => (
             <div key={i} className={styles.pointEntry}>
               {point.heading && <p className={styles.pointHeading}>{point.heading}</p>}
-              <p className={styles.pointBody}><InlineMarkdown text={point.body} /></p>
+              <MarkdownBlock className={styles.pointBody} text={point.body} />
             </div>
           ))}
         </div>
@@ -124,7 +124,7 @@ export function RefereeFullPage() {
                 {structured.score_note && (
                   <div className={styles.section}>
                     <p className={styles.sectionLabel}>Verdict</p>
-                    <p className={styles.prose}><InlineMarkdown text={structured.score_note} /></p>
+                    <MarkdownBlock className={styles.prose} text={structured.score_note} />
                   </div>
                 )}
               </>
