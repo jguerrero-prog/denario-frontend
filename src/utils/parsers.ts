@@ -28,6 +28,44 @@ function extractTitle(md: string): string | null {
   return m ? m[1].trim() : null;
 }
 
+// Extract a LaTeX \title{...} declaration. The real Paper-stage output is
+// LaTeX, which has no markdown # heading — its title lives in \title{}. Handles
+// nested braces (\title{A \textbf{B}}), an optional short-title argument
+// (\title[short]{long}), and \\ line breaks; unwraps inner formatting commands
+// (\textbf{x} → x), drops \thanks/\footnote notes, and collapses whitespace.
+// Returns null when there's no \title, so callers can fall back to markdown.
+function extractLatexTitle(tex: string): string | null {
+  const decl = tex.search(/\\title\s*(?:\[[^\]]*\])?\s*\{/);
+  if (decl === -1) return null;
+
+  // Walk from the mandatory argument's opening brace to its matching close.
+  const open = tex.indexOf('{', decl);
+  if (open === -1) return null;
+  let depth = 0;
+  let end = -1;
+  for (let i = open; i < tex.length; i++) {
+    if (tex[i] === '{') depth++;
+    else if (tex[i] === '}' && --depth === 0) { end = i; break; }
+  }
+  if (end === -1) return null; // unbalanced braces — bail to the fallback
+
+  let inner = tex.slice(open + 1, end);
+  inner = inner.replace(/\\(?:thanks|footnote)\s*\{[^}]*\}/g, ''); // drop notes
+  let prev: string;
+  do {                                                             // unwrap \cmd{x} → x
+    prev = inner;
+    inner = inner.replace(/\\[a-zA-Z]+\s*\{([^{}]*)\}/g, '$1');
+  } while (inner !== prev);
+  inner = inner
+    .replace(/\\\\/g, ' ')        // line breaks
+    .replace(/\\[a-zA-Z]+/g, ' ') // remaining bare commands
+    .replace(/[{}]/g, '')         // stray braces
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return inner || null;
+}
+
 function extractSection(md: string, ...headings: string[]): string | null {
   for (const h of headings) {
     const re = new RegExp(`##\\s+${h}[:\\s]*\\n([\\s\\S]*?)(?=\\n##|$)`, 'i');
@@ -291,8 +329,11 @@ function parsePaper(content: string, mock: StageResult): Partial<StageResult> {
   );
   const citations = citeKeys.size;
 
-  // Strip LaTeX for plain title
-  const rawTitle = extractTitle(content.replace(/\\[a-z]+\{([^}]*)\}/gi, '$1'));
+  // Real manuscript output is LaTeX (\title{}); prefer that. Keep the
+  // markdown-heading path as a fallback for any non-LaTeX content.
+  const rawTitle =
+    extractLatexTitle(content) ??
+    extractTitle(content.replace(/\\[a-z]+\{([^}]*)\}/gi, '$1'));
 
   const stageData: PaperResultData = {
     ...mockData,
