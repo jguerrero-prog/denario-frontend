@@ -304,6 +304,7 @@ function AnalysisReadingView({ result }: { result: StageResult }) {
           onClose={() => setLbOpen(false)}
           onNavigate={setLbIdx}
           backendProjectId={backendId}
+          captions={data?.plotCaptions}
         />
       )}
     </div>

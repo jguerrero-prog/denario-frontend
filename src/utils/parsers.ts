@@ -239,6 +239,39 @@ function parseMethods(
   };
 }
 
+// Real results.md ends with a "References and Generated Artifacts" appendix
+// that labels each plot on its own bullet, e.g.
+// "* Temporal Trends: `data/temporal_trends_1_20260718_205459.png`" —
+// confirmed against real output. denario/results_parser.py's `structured`
+// output collapses these into one flat file list per category (losing the
+// per-file label), so the raw markdown is the only place a real caption
+// survives.
+function findLabeledCaption(rawContent: string, filename: string): string | null {
+  const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // [ \t], not \s, everywhere — \s matches newlines too, which let an earlier
+  // version of this pattern cross into the *next* bullet line and mislabel a
+  // plot with its neighbor's category heading instead of its own line.
+  const lineRe = new RegExp(`^[ \\t]*[*-][ \\t]+\\*{0,2}([^:*\\n]+?)\\*{0,2}:[ \\t]*[^\\n]*${escaped}`, 'mi');
+  return rawContent.match(lineRe)?.[1].trim() ?? null;
+}
+
+// No fabricated numbers when no real label exists — just the filename itself,
+// made readable. Real plot files carry a "_<index>_<14-digit timestamp>"
+// suffix (e.g. "temporal_trends_1_20260718_205459.png") that's noise here.
+function humanizeFilename(name: string): string {
+  const base = name.replace(/\.(png|jpe?g|svg)$/i, '').replace(/_\d+_\d{8}_\d{6}$/, '');
+  return base.split(/[_-]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+}
+
+function derivePlotCaptions(rawContent: string, plots: string[]): Record<string, string> {
+  const captions: Record<string, string> = {};
+  plots.forEach((name, i) => {
+    const label = findLabeledCaption(rawContent, name) ?? humanizeFilename(name);
+    captions[name] = `Figure ${i + 1}. ${label}`;
+  });
+  return captions;
+}
+
 function parseAnalysis(
   content: string,
   mock: StageResult,
@@ -284,6 +317,7 @@ function parseAnalysis(
     ...mockData,
     narrativeFindings: narrative ?? '',
     plots: plots.length > 0 ? plots : [],
+    plotCaptions: derivePlotCaptions(content, plots),
     totalPlots: plots.length,
     selfHeals: selfHealMatch ? parseInt(selfHealMatch[1]) : 0,
     statsGrid,

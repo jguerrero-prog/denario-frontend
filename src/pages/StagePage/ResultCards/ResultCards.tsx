@@ -533,6 +533,7 @@ function AnalysisResultCard({ result, onApprove, onOpenFull }: CardProps) {
           onClose={() => setLightboxOpen(false)}
           onNavigate={setLightboxIdx}
           backendProjectId={backendProjectId}
+          captions={data?.plotCaptions}
         />
       )}
     </>

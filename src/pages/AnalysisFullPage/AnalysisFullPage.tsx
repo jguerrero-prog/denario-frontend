@@ -324,6 +324,7 @@ export function AnalysisFullPage() {
           onClose={() => setLightboxOpen(false)}
           onNavigate={setLightboxIdx}
           backendProjectId={backendProjectId}
+          captions={data?.plotCaptions}
         />
       )}
     </div>

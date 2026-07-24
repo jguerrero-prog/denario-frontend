@@ -159,6 +159,10 @@ export interface StructuredResults {
 export interface AnalysisResultData {
   kind: 'analysis';
   plots: string[];
+  // Keyed by the bare filename in `plots`. Sourced from the real report's
+  // own per-file labels when present, never fabricated (see
+  // derivePlotCaptions in utils/parsers.ts).
+  plotCaptions: Record<string, string>;
   totalPlots: number;
   selfHeals: number;
   narrativeFindings: string;
