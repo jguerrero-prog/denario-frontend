@@ -123,13 +123,13 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** Purely additive — swap the direct store read for `useHydratedPipeline` and add the two early-return guards, same as `AnalysisFullPage`.
 
 ### 1.6 Honor the `model_overrides` field
-- **Status:** Ready · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
-- **Description:** `RunStageRequest.model_overrides` is defined but never read in `runner.py`, so per-agent model selection (e.g. "regenerate methods with claude-opus") silently does nothing.
+- **Status:** Ready · **SP:** 2 → needs re-estimate (see note) · **Needs design:** Yes (new settings screen) · **Hard pivot:** —
+- **Description:** `RunStageRequest.model_overrides` is defined but never read in `runner.py`, so per-agent model selection (e.g. "regenerate methods with claude-opus") silently does nothing. Originally scoped as backend-only, assuming a frontend settings UI already sent this field — **it doesn't exist yet.** There is currently no Configuration settings screen anywhere in the app for a researcher to actually pick per-agent models; `CLAUDE.md`'s "Per-Stage Model Configuration" table describes the intended Config Field Rows per stage, but none of that UI has been built. Scope now includes building that screen, not just wiring the backend field.
 - **Dependencies:** none
-- **User impact:** Per-agent model choice actually takes effect instead of silently no-op'ing.
+- **User impact:** Per-agent model choice actually takes effect instead of silently no-op'ing — and becomes possible at all, since there's no UI to set it today.
 - **Blockers:** none
-- **Files likely touched:** `api/runner.py`, `api/models.py`
-- **Claude suggestion:** Wire the field through to each stage's agent-model assignment; **verify the override actually reaches the agent before claiming it works** — this codebase has hit cross-track parity gaps before.
+- **Files likely touched:** `api/runner.py`, `api/models.py` (backend wiring); new frontend Settings/Config panel (per-stage Config Field Rows per `CLAUDE.md`), `src/api/client.ts` (send `model_overrides` on run requests), `src/types/pipeline.ts`
+- **Claude suggestion:** Wire the field through to each stage's agent-model assignment; **verify the override actually reaches the agent before claiming it works** — this codebase has hit cross-track parity gaps before. Settle the settings screen's shape (modal vs. per-stage inline panel vs. a dedicated settings page) before building it.
 
 ---
 
@@ -212,14 +212,14 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 *Let researchers explore plots and test parameters, not just view static PNGs. Built client-side with `react-plotly.js` inside Denario's own app — not Dash.*
 
 ### 4.1 Preserve scripts/data + build the plot→script map
-- **Status:** Ready · **SP:** 5 · **Needs design:** No · **Hard pivot:** yes · **Foundational (blocks 4.2/4.3/4.4)**
-- **Description:** At the point `get_results()` already moves plots into `input_files/`, also copy the generating scripts and their CSVs to stable storage (before a retry's cleanup wipes them), and build a manifest linking each plot to its producing script and plotting library.
+- **Status:** Held (paused, not implemented) — hard-pivot decided but risk profile is materially higher than the rest of Phase 0/1; deliberately not started · **SP:** 5 → needs re-estimate (live-ledger is more invasive than the static-analysis manifest it replaces) · **Needs design:** No · **Hard pivot:** Decided 2026-07-23 — live run-ledger, captured at execution time · **Foundational (blocks 4.2/4.3/4.4)**
+- **Risks identified before holding (2026-07-23):** (1) the `sitecustomize.py`/PYTHONPATH hook depends on cmbagent's current, undocumented `control/` directory naming — not a public API contract, so a cmbagent upgrade could silently zero out the ledger with no error; (2) a bug in the ledger's own patch code could block the LLM-generated script from running at all if not defensively wrapped (try/except, fail-open); (3) the Analysis self-healing retry loop re-runs revised scripts and wipes the plots folder each pass — the ledger must track run/attempt identity or a stale entry could misattribute a plot to a discarded earlier script; (4) much harder to verify than the frontend tickets this session — only provable against a real live Analysis run through the actual sandbox, not a standalone unit test. If picked back up: implement fail-open, validate against a real run end-to-end, and treat SP as 5+ (bigger than a normal Phase 1 ticket) before scheduling it.
+- **Description:** At the point `get_results()` already moves plots into `input_files/`, also copy the generating scripts and their CSVs to stable storage (before a retry's cleanup wipes them), and build a manifest linking each plot to its producing script and plotting library. **Decided 2026-07-23:** build the manifest as a live run-ledger recorded during the sandboxed script's own execution (e.g. wrapping/patching the plotting call so each `savefig` records its own source script + library at the moment it fires), not a post-hoc static-analysis pass over saved scripts. Denario controls the execution sandbox, so this is available and removes any static-analysis misattribution risk entirely.
 - **Dependencies:** none
 - **User impact:** No direct user-facing change yet, but it's the durable foundation everything interactive needs, and it also hardens the Analysis stage against retry data-loss.
 - **Blockers:** none
-- **Files likely touched:** `denario/denario.py` (`get_results`), new manifest helper module
-- **Claude suggestion:** This is the last moment scripts and final (timestamped) plot names are both known — do the promotion here.
-- **Hard pivot:** choose the linking mechanism first — the static-analysis manifest (`savefig`-prefix match + import-line scan, done after the fact) currently scoped, **vs.** a live run-ledger captured at execution time (stronger, certain linkage, no misattribution risk — the open-science-inspired pattern). Denario controls its own script execution, so the live approach is available to it and is likely the better long-term call.
+- **Files likely touched:** `denario/denario.py` (`get_results`), the cmbagent sandbox execution path (to hook/patch the plotting call and record the ledger), new manifest helper module
+- **Claude suggestion:** This is the last moment scripts and final (timestamped) plot names are both known — do the promotion here. For the ledger itself, the cleanest hook point is wherever the sandbox actually invokes `plt.savefig`/equivalent — confirm that call site in the real execution path before committing to an implementation shape.
 
 ### 4.2 Interactive companion render (backend)
 - **Status:** Blocked · **SP:** 8 · **Needs design:** No · **Hard pivot:** —
