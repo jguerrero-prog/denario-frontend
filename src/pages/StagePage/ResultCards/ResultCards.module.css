@@ -97,6 +97,15 @@
   gap: var(--space-3);
 }
 
+.publicationTeaserLabel {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-pri);
+  line-height: 1.3;
+  margin: 0;
+}
+
 .divider {
   height: 1px;
   width: 100%;

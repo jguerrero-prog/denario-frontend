@@ -595,6 +595,7 @@ function LiteratureResultCard({ result, onApprove, onOpenFull }: CardProps) {
       <p className={`${styles.cardProse} ${styles.cardProseIdea}`}><InlineMarkdown text={result.content || result.rawContent || ''} /></p>
       {teaserPapers.length > 0 && (
         <div className={styles.publicationTeaser}>
+          <p className={styles.publicationTeaserLabel}>Most relevant papers</p>
           {teaserPapers.map((paper, i) => (
             <PublicationCard key={paper.url ?? i} paper={paper} />
           ))}
