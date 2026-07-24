@@ -93,6 +93,7 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Blockers:** none
 - **Files likely touched:** `denario/paper_agents/latex_presets.py` (`latex_pasj`)
 - **Claude suggestion:** One-line `keywords=lambda x: f"\\keywords{{{x}}}"`, mirroring `latex_aas`. (APS/JHEP/NeurIPS correctly omit it — don't touch those.)
+- **Note:** need to test with PASJ journal style.
 
 ### 1.3 Render bullet lists in Referee/Literature bodies
 - **Status:** Ready · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
