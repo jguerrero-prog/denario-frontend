@@ -18,6 +18,9 @@ import type {
   LiteratureResultData,
   RefereeResultData,
   KeywordsResultData,
+  IdeaTranscriptRound,
+  MethodsPlanningTurn,
+  MethodsExecutionStep,
 } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
@@ -176,32 +179,41 @@ function IdeaReadingView({ result }: { result: StageResult }) {
   );
 }
 
-// Discussion tab — the transcript is shown open, no nested collapse (unlike
-// the thread's AdversarialLogCard or IdeaFullPage's collapsed section);
-// this tab exists specifically to read it, so lean on the panel's own scroll.
-function IdeaDiscussionView({ result }: { result: StageResult }) {
-  const data = result.stageData as IdeaResultData | undefined;
-  const rounds = data?.transcript ?? [];
-  const roundCount = rounds.length > 0 ? rounds[rounds.length - 1].round : 0;
+// Discussion tab views — deliberately generic over *which stage* produced the
+// log (detected by data shape in RightPanel below, not by stage id), since a
+// Rigorous-track Idea run produces the same planning/execution shape Methods
+// does (see ticket 2.2) and would otherwise be misrouted into the transcript
+// view just because its stage id is "idea".
+
+// The transcript is shown open, no nested collapse (unlike the thread's
+// AdversarialLogCard or IdeaFullPage's collapsed section); this tab exists
+// specifically to read it, so lean on the panel's own scroll.
+function TranscriptDiscussionView({ transcript }: { transcript: IdeaTranscriptRound[] }) {
+  const roundCount = transcript.length > 0 ? transcript[transcript.length - 1].round : 0;
 
   return (
     <div className={styles.readingView}>
       {roundCount > 0 && (
         <p className={styles.readingMeta}>{roundCount} round{roundCount === 1 ? '' : 's'} · idea_maker ↔ idea_hater</p>
       )}
-      <IdeaTranscriptRounds rounds={rounds} />
+      <IdeaTranscriptRounds rounds={transcript} />
     </div>
   );
 }
 
-// Same "no nested collapse, lean on panel scroll" rule as IdeaDiscussionView
+// Same "no nested collapse, lean on panel scroll" rule as TranscriptDiscussionView
 // — this tab is the dedicated place to read it. Two labeled sections
 // (Planning, Execution) instead of one flat list, per REASONING_LOG_TICKETS.md.
-function MethodsDiscussionView({ result }: { result: StageResult }) {
-  const data = result.stageData as MethodsResultData | undefined;
+function PlanningExecutionDiscussionView({
+  planningLog,
+  executionLog,
+}: {
+  planningLog: MethodsPlanningTurn[];
+  executionLog: MethodsExecutionStep[];
+}) {
   return (
     <div className={styles.readingView}>
-      <MethodsLogSections planningLog={data?.planningLog ?? []} executionLog={data?.executionLog ?? []} />
+      <MethodsLogSections planningLog={planningLog} executionLog={executionLog} />
     </div>
   );
 }
@@ -469,15 +481,21 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
   const result = stage?.result;
   const file   = result?.file;
 
-  const ideaTranscript = selected === 'idea'
-    ? (result?.stageData as IdeaResultData | undefined)?.transcript
-    : undefined;
-  const methodsLogData = selected === 'methods'
-    ? (result?.stageData as MethodsResultData | undefined)
-    : undefined;
-  const hasDiscussion =
-    (!!ideaTranscript && ideaTranscript.length > 0) ||
-    (!!methodsLogData && (methodsLogData.planningLog.length > 0 || methodsLogData.executionLog.length > 0));
+  // Detected by data shape, not by `selected`'s stage id — any stage's result
+  // can carry either a transcript (two-voice debate) or a planning/execution
+  // log (planner/reviewer + sequential steps); which one is present decides
+  // the Discussion view, so a Rigorous-track Idea run (planning/execution
+  // shaped, per ticket 2.2) renders correctly without this file knowing that
+  // Idea can produce that shape too.
+  const logData = result?.stageData as {
+    transcript?: IdeaTranscriptRound[];
+    planningLog?: MethodsPlanningTurn[];
+    executionLog?: MethodsExecutionStep[];
+  } | undefined;
+  const transcript    = logData?.transcript   ?? [];
+  const planningLog   = logData?.planningLog  ?? [];
+  const executionLog  = logData?.executionLog ?? [];
+  const hasDiscussion = transcript.length > 0 || planningLog.length > 0 || executionLog.length > 0;
 
   const stageStatuses = Object.fromEntries(
     STAGE_ORDER.map(sid => [sid, pipeline.stages[sid]?.status ?? 'locked'])
@@ -538,9 +556,9 @@ export function RightPanel({ stageId: activeStageId }: RightPanelProps) {
           <div className={styles.panelContent}>
             {result ? (
               hasDiscussion && discussionTab === 'discussion' ? (
-                selected === 'methods'
-                  ? <MethodsDiscussionView result={result} />
-                  : <IdeaDiscussionView result={result} />
+                planningLog.length > 0 || executionLog.length > 0
+                  ? <PlanningExecutionDiscussionView planningLog={planningLog} executionLog={executionLog} />
+                  : <TranscriptDiscussionView transcript={transcript} />
               ) : (
                 <PanelReadingView stageId={selected} />
               )

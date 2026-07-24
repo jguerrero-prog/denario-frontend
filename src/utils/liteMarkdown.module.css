@@ -34,6 +34,16 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Nested <ul>/<ol> (real DOM nesting now, not a paddingLeft: depth*16 hack)
+   indents relative to its parent <li> instead of the page. */
+.list .list {
+  padding-left: 16px;
+  margin-top: 4px;
 }
 
 .listRow {
