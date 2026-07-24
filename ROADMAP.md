@@ -148,13 +148,13 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** Generalize the Overview/Discussion detection to "has parsed log content" rather than stage-name checks; give lists real `<ul>/<ol>` semantics with a depth cap.
 
 ### 2.2 Idea adversarial log (Rigorous track)
-- **Status:** Ready · **SP:** 3 · **Needs design:** Minimal (reuse) · **Hard pivot:** —
+- **Status:** Ready (unblocked by 2.1) but **Blocked** on verification · **SP:** 3 · **Needs design:** Minimal (reuse) · **Hard pivot:** —
 - **Description:** A Rigorous-track Idea run produces the same planning-debate + execution-step structure as Methods, but the shipped Idea viewer only reads the Fast-track `idea.log`, so a Rigorous Idea run silently shows no reasoning log at all.
-- **Dependencies:** 2.1
+- **Dependencies:** 2.1 (done)
 - **User impact:** Rigorous-track Idea runs show their adversarial reasoning instead of a silent blank — closes a gap a user would hit without warning.
-- **Blockers:** none
-- **Files likely touched:** backend `denario/idea.py` (confirm the real output directory); frontend `src/utils/parsers.ts`, `src/utils/stageRunner.ts`, `src/pages/StagePage/ConversationThread.tsx`, `src/pages/StagePage/RightPanel.tsx`, `src/pages/IdeaFullPage/IdeaFullPage.tsx`
-- **Claude suggestion:** Reuse the Methods components (2.1 makes them stage-agnostic); confirm the output dir name against a real run before wiring the fetch.
+- **Blockers:** **Need to run Rigorous track first.** Source-level investigation (2026-07-23, cross-referencing `cmbagent/functions.py`, `autogen/agentchat/groupchat.py:1314`, and a real Analysis `final_plan.json`) found a real structural wrinkle Methods doesn't have: Methods' execution steps are always handled by one fixed agent (`researcher`), so its fetch hardcodes that name — but Idea's steps alternate between `idea_maker`/`idea_hater` per step (confirmed via `agent_for_sub_task` routing in `cmbagent/functions.py`), with the correct agent for each step readable from `final_plan.json`'s `sub_task_agent` field (confirmed present, holding `"engineer"` in the real Analysis sample checked). This is solid source-level evidence, not a guess, but nothing here has been checked against a real Rigorous-track Idea run's actual output on disk — that requires triggering a real (costly) generation. Do that first, confirm the file paths/agent names match, before wiring the fetch.
+- **Files likely touched:** frontend only — `src/types/pipeline.ts` (add `planningLog`/`executionLog` to `IdeaResultData`, mirroring `MethodsResultData`), `src/utils/stageRunner.ts` (new `fetchIdeaLog()`: read `sub_task_agent` per step from `final_plan.json`, not a hardcoded agent name like `fetchMethodsLog` uses), `src/pages/IdeaFullPage/IdeaFullPage.tsx` (render via `MethodsLogCard`/`MethodsLogSections`, already stage-agnostic per 2.1). `RightPanel.tsx` needs no further changes — its Discussion-tab detection already checks data shape from 2.1.
+- **Claude suggestion:** Reuse the Methods components (2.1 makes them stage-agnostic) — confirmed feasible. Do not hardcode a single agent name per step the way `fetchMethodsLog` does; read `sub_task_agent` from the plan per step instead.
 
 ### Not planned (with reasons)
 - **Analysis log** — technically buildable (same cmbagent call) but the per-step artifact is one large raw two-voice (engineer + researcher) transcript, too noisy to be worth reading. Closed as a scope call, not deferred.
