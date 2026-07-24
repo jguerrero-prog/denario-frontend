@@ -153,6 +153,12 @@
   margin: 0;
 }
 
+.publicationList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .prose {
   font-family: var(--font-heading);
   font-size: 14px;

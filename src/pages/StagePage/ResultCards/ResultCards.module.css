@@ -91,6 +91,12 @@
   width: 100%;
 }
 
+.publicationTeaser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .divider {
   height: 1px;
   width: 100%;

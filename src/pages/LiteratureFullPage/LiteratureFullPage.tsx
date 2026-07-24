@@ -2,6 +2,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import { InlineMarkdown, MarkdownBlock } from '../../utils/MarkdownBlock';
+import { PublicationCard } from '../../components/molecules/PublicationCard/PublicationCard';
 import type { LiteratureResultData, LiteraturePaper } from '../../types/pipeline';
 import styles from './LiteratureFullPage.module.css';
 
@@ -123,6 +124,22 @@ export function LiteratureFullPage() {
                     {structured.papers.map((paper, i) => (
                       <PaperEntry key={i} paper={paper} />
                     ))}
+                  </div>
+                )}
+
+                {/* The full deduplicated search corpus — raw metadata for
+                    every paper the search actually found across every query
+                    round, not just the ones discussed above. Distinct from
+                    "Most Relevant Papers": no fabricated similarities/
+                    differences for papers the LLM never compared. */}
+                {data && data.searchedPapers.length > 0 && (
+                  <div className={styles.section}>
+                    <p className={styles.sectionLabel}>All Searched Papers ({data.searchedPapers.length})</p>
+                    <div className={styles.publicationList}>
+                      {data.searchedPapers.map((paper, i) => (
+                        <PublicationCard key={paper.url ?? i} paper={paper} />
+                      ))}
+                    </div>
                   </div>
                 )}
 

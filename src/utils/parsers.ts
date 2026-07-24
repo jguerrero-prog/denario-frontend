@@ -395,7 +395,10 @@ function parseLiterature(content: string, structured?: Record<string, unknown> |
   // the full page falls back to raw markdown (see LiteratureFullPage.tsx).
   const parsedStructured = (structured as unknown as StructuredLiteratureReview | undefined) ?? null;
 
-  const stageData: LiteratureResultData = { kind: 'literature', structured: parsedStructured };
+  // searchedPapers arrives later via a separate sidecar fetch (see
+  // fetchSearchedPapers in stageRunner.ts) — same two-phase pattern as
+  // Idea's transcript / Methods' planning-execution log.
+  const stageData: LiteratureResultData = { kind: 'literature', structured: parsedStructured, searchedPapers: [] };
 
   const tags: string[] = [];
   if (parsedStructured?.decision) tags.push(parsedStructured.decision);

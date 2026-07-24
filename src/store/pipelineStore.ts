@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound, MethodsResultData, MethodsPlanningTurn, MethodsExecutionStep } from '../types/pipeline';
+import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound, MethodsResultData, MethodsPlanningTurn, MethodsExecutionStep, LiteratureResultData, SearchedPaper } from '../types/pipeline';
 import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
 import { parseBackendResult } from '../utils/parsers';
-import { buildMockResult, fetchIdeaTranscript, fetchMethodsLog } from '../utils/stageRunner';
+import { buildMockResult, fetchIdeaTranscript, fetchMethodsLog, fetchSearchedPapers } from '../utils/stageRunner';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
@@ -27,6 +27,7 @@ interface PipelineStore {
   setStageResult: (stageId: StageId, result: StageResult) => void;
   setIdeaTranscript: (transcript: IdeaTranscriptRound[]) => void;
   setMethodsLog: (planningLog: MethodsPlanningTurn[], executionLog: MethodsExecutionStep[]) => void;
+  setLiteratureSearchedPapers: (papers: SearchedPaper[]) => void;
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
   unlockNextStage: (stageId: StageId) => void;  // like approveStage, but adds no conversation messages
   setActiveStage: (stageId: StageId) => void;
@@ -307,6 +308,12 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       });
     }
 
+    if (updatedStages.literature.status === 'complete' && updatedStages.literature.result) {
+      fetchSearchedPapers(id).then(papers => {
+        if (papers.length > 0) get().setLiteratureSearchedPapers(papers);
+      });
+    }
+
     return id;
   },
 
@@ -381,6 +388,21 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       return {
         pipeline: updateStage(pipeline, 'methods', {
           result: { ...stage.result, stageData: { ...stageData, planningLog, executionLog } },
+        }),
+      };
+    }),
+
+  // Same reasoning as setIdeaTranscript/setMethodsLog — the full searched
+  // corpus lives in a separate sidecar file, arriving after the literature
+  // result itself is set.
+  setLiteratureSearchedPapers: (papers) =>
+    set(({ pipeline }) => {
+      const stage = pipeline?.stages.literature;
+      if (!pipeline || !stage?.result) return {};
+      const stageData = stage.result.stageData as LiteratureResultData;
+      return {
+        pipeline: updateStage(pipeline, 'literature', {
+          result: { ...stage.result, stageData: { ...stageData, searchedPapers: papers } },
         }),
       };
     }),

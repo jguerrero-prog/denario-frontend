@@ -2,6 +2,7 @@
 @import '@fontsource/literata/600.css';
 @import '@fontsource-variable/instrument-sans';
 @import '@fontsource-variable/inter';
+@import '@fontsource-variable/open-sans';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 
@@ -40,6 +41,9 @@
   --font-heading: 'Literata', Georgia, serif;
   --font-body:    'Inter Variable', 'Inter', system-ui, sans-serif;
   --font-mono:    'JetBrains Mono', ui-monospace, monospace;
+  /* Labels/link text in the Publication card (literature search results) —
+     the only place this typeface is used; see PublicationCard.module.css. */
+  --font-label:   'Open Sans Variable', 'Open Sans', system-ui, sans-serif;
 
   /* Font Sizes */
   --text-xs:   10px;

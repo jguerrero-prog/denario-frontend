@@ -200,9 +200,24 @@ export interface StructuredLiteratureReview {
   conclusion?: string | null;
 }
 
+// Mirrors DenarioBackend's denario/papers_log_parser.py — the full,
+// deduplicated set of papers Semantic Scholar returned across every query
+// round of the novelty-check loop (denario/langgraph_agents/literature.py),
+// not just the handful the LLM chose to discuss in literature.md. Distinct
+// shape from LiteraturePaper: raw search metadata (authors/abstract), not a
+// novelty comparison (no similarities/differences to fabricate).
+export interface SearchedPaper {
+  title: string;
+  year?: string | null;
+  authors: string;
+  abstract: string;
+  url?: string | null;
+}
+
 export interface LiteratureResultData {
   kind: 'literature';
   structured?: StructuredLiteratureReview | null;
+  searchedPapers: SearchedPaper[];
 }
 
 // Mirrors DenarioBackend's denario/structured_referee.py — populated by

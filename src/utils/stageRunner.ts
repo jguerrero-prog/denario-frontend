@@ -14,6 +14,7 @@ import type {
   AnalysisResultData,
   PaperResultData,
   LiteratureResultData,
+  SearchedPaper,
   RefereeResultData,
   KeywordsResultData,
 } from '../types/pipeline';
@@ -29,6 +30,22 @@ export async function fetchIdeaTranscript(backendId: string): Promise<IdeaTransc
     const res = await fetch(api.fileUrl(backendId, 'idea_generation_output/idea.log'));
     if (!res.ok) return [];
     return parseIdeaLog(await res.text());
+  } catch {
+    return [];
+  }
+}
+
+// The full, deduplicated set of papers the search actually found (see
+// DenarioBackend's denario/papers_log_parser.py) — only 3-ish of these ever
+// reach literature.json's `papers` (the LLM's own curated comparison).
+// Same best-effort side-channel pattern as fetchIdeaTranscript: missing is
+// expected for mock runs and older projects generated before this sidecar
+// existed, so fail quietly to an empty list rather than surface an error.
+export async function fetchSearchedPapers(backendId: string): Promise<SearchedPaper[]> {
+  try {
+    const res = await fetch(api.fileUrl(backendId, 'literature_output/papers_processed.json'));
+    if (!res.ok) return [];
+    return await res.json();
   } catch {
     return [];
   }
@@ -287,7 +304,7 @@ export function buildMockResult(stageId: StageId, track: Track): StageResult {
       tags: [],
       durationLabel: standard ? '1 min 44 sec' : '3 min 29 sec',
       generatedAt: Date.now(),
-      stageData: { kind: 'literature' } satisfies LiteratureResultData,
+      stageData: { kind: 'literature', searchedPapers: [] } satisfies LiteratureResultData,
     },
     referee: {
       stageId, track, file: 'referee.md',
@@ -478,6 +495,15 @@ function _onStageComplete(
         if (planningLog.length > 0 || executionLog.length > 0) {
           usePipelineStore.getState().setMethodsLog(planningLog, executionLog);
         }
+      });
+    }
+  }
+
+  if (stageId === 'literature') {
+    const backendId = usePipelineStore.getState().backendProjectId;
+    if (backendId) {
+      fetchSearchedPapers(backendId).then(papers => {
+        if (papers.length > 0) usePipelineStore.getState().setLiteratureSearchedPapers(papers);
       });
     }
   }
