@@ -1,5 +1,5 @@
-import { useNavigate, useParams } from 'react-router-dom';
-import { usePipelineStore } from '../../store/pipelineStore';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import { InlineMarkdown } from '../../utils/MarkdownBlock';
 import { MethodsLogCard } from '../../components/molecules/MethodsLog/MethodsLog';
 import type { MethodsResultData } from '../../types/pipeline';
@@ -34,7 +34,8 @@ function DownloadIcon() {
 export function MethodsFullPage() {
   const navigate = useNavigate();
   const { projectId, stageId = 'methods' } = useParams<{ projectId: string; stageId: string }>();
-  const result = usePipelineStore(s => s.pipeline?.stages[stageId as 'methods']?.result);
+  const { pipeline, needsFetch, fetchFailed } = useHydratedPipeline(projectId);
+  const result = pipeline?.stages[stageId as 'methods']?.result;
 
   const file = result?.file ?? 'methods.md';
   const data = result?.stageData as MethodsResultData | undefined;
@@ -49,6 +50,14 @@ export function MethodsFullPage() {
 
   function handleCopy() {
     navigator.clipboard.writeText(result?.content ?? '').catch(() => {});
+  }
+
+  if (fetchFailed) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (needsFetch) {
+    return <div className={styles.page} />;
   }
 
   return (

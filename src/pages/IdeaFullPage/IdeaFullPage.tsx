@@ -1,5 +1,5 @@
-import { useNavigate, useParams } from 'react-router-dom';
-import { usePipelineStore } from '../../store/pipelineStore';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
+import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import { IdeaTranscriptCard } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
 import type { IdeaResultData } from '../../types/pipeline';
 import styles from './IdeaFullPage.module.css';
@@ -33,7 +33,8 @@ function DownloadIcon() {
 export function IdeaFullPage() {
   const navigate = useNavigate();
   const { projectId, stageId = 'idea' } = useParams<{ projectId: string; stageId: string }>();
-  const result = usePipelineStore(s => s.pipeline?.stages[stageId as 'idea']?.result);
+  const { pipeline, needsFetch, fetchFailed } = useHydratedPipeline(projectId);
+  const result = pipeline?.stages[stageId as 'idea']?.result;
 
   const file = result?.file ?? 'idea.md';
 
@@ -41,6 +42,14 @@ export function IdeaFullPage() {
 
   function handleBack() {
     navigate(`/project/${projectId}/stage/${stageId}`);
+  }
+
+  if (fetchFailed) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (needsFetch) {
+    return <div className={styles.page} />;
   }
 
   return (
