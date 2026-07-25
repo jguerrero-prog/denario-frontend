@@ -152,6 +152,21 @@ export const api = {
     return req(`/projects/${projectId}/stages/${stageId}/result`);
   },
 
+  // ── Paper endpoints ──────────────────────────────────────────────────────────
+
+  recompilePaper(projectId: string, texContent: string): Promise<{
+    success:       boolean;
+    pdf_available: boolean;
+    errors:        string | null;
+    log:           string | null;
+    compiled_at:   number;
+  }> {
+    return req(`/projects/${projectId}/paper/recompile`, {
+      method: 'POST',
+      body: JSON.stringify({ tex_content: texContent }),
+    });
+  },
+
   // ── File URLs ────────────────────────────────────────────────────────────────
 
   fileUrl(projectId: string, filePath: string, cacheBust?: number): string {
