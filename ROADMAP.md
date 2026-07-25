@@ -166,13 +166,14 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 *Edit and recompile the manuscript in-app, Prism-style. The compile/error/auto-fix machinery already exists in the backend — these tickets expose it, they don't rebuild it.*
 
 ### 3.1 On-demand recompile endpoint
-- **Status:** Ready · **SP:** 3 · **Needs design:** No · **Hard pivot:** —
-- **Description:** A new endpoint that writes edited `.tex`, recompiles by reusing the existing `compile_tex_document`/`compile_latex`, returns parsed errors via the existing `extract_latex_errors`, and copies the PDF back so the current availability-check + fetch pattern keeps working.
+- **Status:** Shipped (2026-07-24) · **SP:** 3 · **Needs design:** No · **Hard pivot:** —
+- **Description:** A new endpoint that writes edited `.tex`, recompiles by reusing the existing `compile_latex`, returns parsed errors via the existing `extract_latex_errors`, and copies the PDF back so the current availability-check + fetch pattern keeps working.
 - **Dependencies:** none
 - **User impact:** Foundation for any in-app editing — lets an edited manuscript actually recompile to a fresh PDF.
 - **Blockers:** none
-- **Files likely touched:** new `api/routes/paper.py` (or extend `api/routes/files.py`), `denario/paper_agents/latex.py` (reuse), `api/runner.py`, `api/models.py`, `src/api/client.ts`
-- **Claude suggestion:** Reconstruct the minimal `GraphState`-shaped paths the compile functions expect rather than assuming a drop-in call; serialize concurrent recompiles (the cleanup step isn't concurrency-safe); degrade honestly if no LaTeX toolchain is installed.
+- **Files touched:** new `api/routes/paper.py`, `denario/paper_agents/manuscript_edit.py` (new — reuses `latex.py`'s `compile_latex`/`extract_latex_errors`), `api/runner.py` (`_compile_lock`), `api/main.py` (router registration), `src/api/client.ts` (`recompilePaper`)
+- **Verified against real project data**, not just theorized — found and fixed a real bug in the process: `compile_latex` only ever writes `LaTeX_log` from inside a `CalledProcessError` handler, so a clean pass or (as on this dev machine, no `xelatex` installed) a missing toolchain entirely never creates the log file at all — calling `extract_latex_errors` unconditionally crashed on the nonexistent file. Fixed to only call it when the log exists. Concurrency guard (409 on a second in-flight recompile) and the no-toolchain degrade path (`success: true, pdf_available: false`) both confirmed working via FastAPI's in-process `TestClient`.
+- **Next:** ticket 3.2 (split-pane CodeMirror editor) — no UI built yet, this ticket is the backend + API client method only.
 
 ### 3.2 Split-pane LaTeX editor + live PDF preview
 - **Status:** Blocked · **SP:** 8 · **Needs design:** Yes · **Hard pivot:** —
