@@ -81,7 +81,7 @@ export function LiteratureFullPage() {
 
   return (
     <div className={styles.layout}>
-      <Sidebar userEmail="researcher@lab.edu" />
+      <Sidebar />
 
       <main className={styles.main}>
         <div className={styles.topBar}>

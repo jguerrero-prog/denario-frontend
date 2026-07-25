@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { HomePage } from './pages/HomePage/HomePage';
+import { LabPage } from './pages/LabPage/LabPage';
+import { PaperPage } from './pages/PaperPage/PaperPage';
 import { StagePage } from './pages/StagePage/StagePage';
 import { IdeaFullPage } from './pages/IdeaFullPage/IdeaFullPage';
 import { MethodsFullPage } from './pages/MethodsFullPage/MethodsFullPage';
@@ -24,6 +26,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
+      <Route path="/lab" element={<LabPage />} />
+      <Route path="/paper" element={<PaperPage />} />
       <Route path="/project/:projectId/stage/:stageId/full" element={<StageFullPageDispatch />} />
       <Route path="/project/:projectId/stage/:stageId" element={<StagePage />} />
       {/* Convenience redirect: /project/:id → stage 1 */}

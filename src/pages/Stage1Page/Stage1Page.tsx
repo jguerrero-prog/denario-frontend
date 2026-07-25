@@ -141,7 +141,7 @@ export function Stage1Page({ variant = 'idle' }: { variant?: Stage1Variant }) {
 
   return (
     <div className={styles.layout}>
-      <Sidebar activeStageId="input" />
+      <Sidebar />
 
       {/* ── Main area ── */}
       <main className={styles.main}>

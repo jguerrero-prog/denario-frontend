@@ -24,20 +24,6 @@ const meta = {
     ),
   ],
   argTypes: {
-    defaultMode: {
-      control: 'radio',
-      options: ['pipeline', 'modular'],
-      description: 'Pipeline locks stages sequentially; Modular makes every stage accessible.',
-    },
-    activeStageId: {
-      control: 'select',
-      options: ['input', 'idea', 'methods', 'analysis', 'paper', 'literature', 'referee', 'keywords'],
-      description: 'The stage that is currently open / active.',
-    },
-    userEmail: {
-      control: 'text',
-      description: 'Authenticated user email shown in the user row.',
-    },
     projectName: {
       control: 'text',
       description: 'Currently open project name. Leave blank to show "No project open".',
@@ -49,42 +35,18 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // ── Stories ───────────────────────────────────────────────────────────────────
+// The app-shell nav (New/Lab/Paper) is static — no per-stage state to vary
+// here anymore. Stage-by-stage navigation moved out of the sidebar; see
+// ROADMAP.md's Epic 6 (Compose Bar).
 
-/** Home state — no pipeline run has started yet. Input Prompt is the entry point. */
-export const Home: Story = {
-  args: {
-    defaultMode: 'pipeline',
-    activeStageId: 'input',
-    userEmail: 'researcher@lab.edu',
-  },
+/** No project open — the default state before starting or loading one. */
+export const NoProject: Story = {
+  args: {},
 };
 
-/** Pipeline in progress — 3 stages done, Analysis is active. */
-export const PipelineInProgress: Story = {
+/** A project is currently open. */
+export const WithProject: Story = {
   args: {
-    defaultMode: 'pipeline',
-    activeStageId: 'analysis',
-    userEmail: 'researcher@lab.edu',
     projectName: 'co2-temp-study',
-  },
-};
-
-/** Modular mode — every stage is accessible regardless of completion. */
-export const ModularMode: Story = {
-  args: {
-    defaultMode: 'modular',
-    activeStageId: 'literature',
-    userEmail: 'researcher@lab.edu',
-    projectName: 'protein-folding-ml',
-  },
-};
-
-/** All stages complete. */
-export const AllComplete: Story = {
-  args: {
-    defaultMode: 'pipeline',
-    activeStageId: 'keywords',
-    userEmail: 'j.guerrero@simonsfoundation.org',
-    projectName: 'equity-returns-analysis',
   },
 };

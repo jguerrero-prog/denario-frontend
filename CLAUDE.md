@@ -40,21 +40,33 @@ Each stage produces a file that gates the next stage.
 │  LEFT SIDEBAR  │   CONVERSATION COLUMN         │  RIGHT PANEL │
 │  ~16% width    │   fluid (center)              │  ~23% width  │
 │                │                               │              │
-│  Stage nav     │  One artifact card per stage  │  File output │
-│  Status dots   │  (idea.md, method.md, …)      │  monitors    │
-│  Accordion rows│  AI-generated prose + actions │  Download    │
-│  Lock/unlock   │  "Approve & Proceed →"        │  rows        │
-│  Mode toggle   │                               │  Breadcrumb  │
+│  New/Lab/Paper │  One artifact card per stage  │  File output │
+│  nav           │  (idea.md, method.md, …)      │  monitors    │
+│  Project name  │  AI-generated prose + actions │  Download    │
+│  + backend     │  "Approve & Proceed →"        │  rows        │
+│  status        │                               │  Breadcrumb  │
 │  Settings gear │                               │  bar (top)   │
 └────────────────┴──────────────────────────────┴──────────────┘
 ```
 
 ### Left Sidebar
-- **Stage rows** — icon + label + status dot (muted = locked, animated green = generating, solid = complete)
-- **Accordion rows** — nav-chevron-right (collapsed) / nav-chevron-down (expanded); children are sub-steps
-- **Lock icon** — visible on locked stage rows in Pipeline mode; hidden in Modular mode
-- **Mode Toggle Pill** — switches between Pipeline mode (sequential) and Modular mode (any stage accessible)
-- **Settings gear** — always neutral; opens project settings
+An app-shell nav, not per-project stage navigation — that job moved out of
+the sidebar entirely, to the Compose Bar (Epic 6 in `ROADMAP.md`).
+- **New / Lab / Paper** — flat nav list. New starts a new project (same
+  behavior as before). Lab and Paper are placeholder destinations today
+  (`src/pages/LabPage/`, `src/pages/PaperPage/`) — Lab will house the
+  interactive data-visualization work (Epic 4), Paper the LaTeX manuscript
+  editor (Epic 3); neither is built out yet.
+- **Project section** — current project name (or "No project open") +
+  backend connection status dot.
+- **Settings gear** — always neutral; opens project settings.
+
+Removed in the redesign: the old per-stage nav rows, lock icons, and the
+Pipeline/Modular mode toggle pill (the toggle was already dead — local
+component state disconnected from the rest of the app). Stage-to-stage
+navigation within an open project is now: scroll the conversation thread,
+or use "Approve & Proceed" sequentially. A `/command`-driven stage jump via
+the Compose Bar is the intended long-term replacement once Epic 6 ships.
 
 ### Conversation Column (Artifact Cards)
 Each card follows this structure:
@@ -141,7 +153,6 @@ Supported providers: OpenAI, Anthropic Claude, Google Gemini (mixed per-agent ro
 | `cmbagent` | The sandboxed code execution environment used in Stage 4 |
 | Adversarial loop | The Stage 2 debate between `idea_maker` and `idea_hater` |
 | Self-healing loop | Stage 4's autonomous error-correction cycle for generated Python |
-| Modular mode | UI mode that removes sequential locks, allowing any stage to be edited freely |
-| Pipeline mode | Default sequential mode; stages unlock one at a time |
+| Pipeline/Modular mode | **Removed from the sidebar** (see Left Sidebar above) — was a UI toggle between sequential stage-unlock and freely-jumpable stages. Underlying stage-gate mechanics (`approveStage`/`unlockNextStage`) still exist; only the toggle and its lock-icon UI are gone. Not to be confused with Fast/Curated Track below, a separate per-stage generation concept. |
 | Fast Track | Single-model, low-latency generation for any stage |
 | Curated Track | Full multi-agent swarm for any stage |

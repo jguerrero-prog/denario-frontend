@@ -203,6 +203,15 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** Full-document rewrite, not diff/patch — a manuscript is small enough that whole-file round-trips avoid the fragile substring-matching that made OpenPrism/assistant-ui edits unreliable. Use `@codemirror/merge`'s `MergeView` for the preview; validate the LLM output is well-formed LaTeX (balanced `\begin`/`\end`, has `\documentclass`) before it can overwrite the buffer.
 - **Hard pivot (decided):** the editor's raw `.tex` buffer is the source of truth once the editor ships; this **supersedes** the old structured-field section-rewrite approach (was Compose Bar 6.8).
 
+### 3.5 Standalone "Paper" workspace (new sidebar nav destination)
+- **Status:** Ready (placeholder shipped 2026-07-24) · **SP:** needs estimate · **Needs design:** Yes · **Hard pivot:** —
+- **Description:** The sidebar redesign (2026-07-24) added a "Paper" nav item routing to `/paper` (`src/pages/PaperPage/`), intended as a dedicated manuscript-editing space distinct from the per-project `PaperFullPage` (which only shows the *current* project's Paper stage). Today it's a bare "coming soon" placeholder. Real scope: is this a global cross-project manuscript picker + editor, or does it just deep-link into the currently-open project's manuscript once 3.2's editor exists? Needs a decision before building past the placeholder.
+- **Dependencies:** 3.1 (recompile endpoint), 3.2 (split-pane editor) — this is effectively the "where does the editor live" question for that epic, not new editor functionality itself.
+- **User impact:** A dedicated place to work on the manuscript without navigating through a specific project's stage flow — exact value depends on the cross-project vs. per-project decision above.
+- **Blockers:** 3.2 not built yet; scope decision above not made.
+- **Files likely touched:** `src/pages/PaperPage/PaperPage.tsx` (replace placeholder), depends on wherever 3.2's editor component ends up living.
+- **Claude suggestion:** Don't build this until 3.2 exists — right now it would just be a second empty shell pointing at nothing. Decide the cross-project-vs-per-project question first; it changes the routing shape (`/paper` vs `/paper/:projectId`).
+
 ### Open design questions (decide during 3.2–3.4)
 `.bib` editability (in scope or `.tex`-only?) · how a manual edit interacts with the Approve-&-Proceed stage gate · whether auto-fix (3.3) is automatic after a failed save or an explicit click.
 
@@ -247,6 +256,15 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Blockers:** 4.1
 - **Files likely touched:** new table component, `api/routes/files.py` (add `.csv` to `INLINE_EXTENSIONS`)
 - **Claude suggestion:** Small lift once 4.1 promotes the CSVs — pure tabular rendering, no companion-execution step.
+
+### 4.5 Standalone "Lab" workspace (new sidebar nav destination)
+- **Status:** Ready (placeholder shipped 2026-07-24) · **SP:** needs estimate · **Needs design:** Yes · **Hard pivot:** —
+- **Description:** The sidebar redesign (2026-07-24) added a "Lab" nav item routing to `/lab` (`src/pages/LabPage/`), intended to eventually showcase the interactive data-visualization work this whole epic describes (4.2's chart-spec rendering, 4.3's "Interact with it" popup). Today it's a bare "coming soon" placeholder. Real scope needs deciding: a cross-project data-exploration space, or a deep-link into the current project's Analysis stage once 4.2/4.3 exist?
+- **Dependencies:** 4.1 (held), 4.2, 4.3 — this is "where does the interactive-viz work surface," not new viz functionality itself.
+- **User impact:** A dedicated place to explore analysis outputs — exact value depends on the cross-project vs. per-project decision above.
+- **Blockers:** 4.1 is held (see its own risk notes above); 4.2/4.3 not built; scope decision above not made.
+- **Files likely touched:** `src/pages/LabPage/LabPage.tsx` (replace placeholder), depends on wherever 4.2/4.3's components end up living.
+- **Claude suggestion:** Don't build past the placeholder until 4.1 is unheld and 4.2 exists — right now this would be an empty shell with nothing to show. Decide the cross-project-vs-per-project question first, same fork as 3.5's Paper workspace.
 
 ### Not possible
 - **Auto-detect library & always render interactively** — cmbagent's `load_plots()` hard-whitelists raster extensions, so a non-PNG artifact never reaches Denario's layer. Would require editing the vendored cmbagent package (out of bounds). The per-plot on-demand approach above sidesteps this entirely.

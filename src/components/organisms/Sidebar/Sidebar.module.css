@@ -144,66 +144,6 @@
   flex-shrink: 0;
 }
 
-.sidebarCollapsed .toggleSection,
-.sidebarCollapsed .toggleAreaDivider,
-.sidebarCollapsed .sectionLabel {
-  visibility: hidden;
-}
-
-/* ── Pipeline / Modular toggle ── */
-
-.toggleSection {
-  padding: 24px 16px 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  flex-shrink: 0;
-}
-
-.togglePill {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 168px;
-  height: 32px;
-  padding: 4px;
-  border-radius: 999px;
-  background: #2F2F2F;
-}
-
-.toggleOption,
-.toggleLabel {
-  position: relative;
-  z-index: 1;
-  flex: 1 0 0;
-  height: 24px;
-  background: none;
-  border: none;
-  border-radius: 999px;
-  padding: 0;
-  font-family: var(--font-sidebar-body);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-  white-space: nowrap;
-  color: #E4E4E4;
-}
-
-.toggleActive {
-  background: #2563EB !important;
-  color: #fff !important;
-}
-
-.toggleCaption {
-  padding-top: 6px;
-  font-family: var(--font-sidebar-body);
-  font-size: 10px;
-  color: #8B837C;
-  text-align: left;
-}
-
 /* ── Section label ── */
 
 .sectionLabel {
@@ -217,23 +157,23 @@
   flex-shrink: 0;
 }
 
-/* ── Stage rows ── */
+/* ── App nav (New / Lab / Paper) ── */
 
-.stageNav {
+.appNav {
   display: flex;
   flex-direction: column;
   gap: 6px;
   width: 100%;
-  padding-bottom: 12px;
+  padding: 12px 0;
   flex-shrink: 0;
 }
 
-.sidebarCollapsed .stageRow {
+.sidebarCollapsed .navRow {
   justify-content: center;
   padding: 0 8px;
 }
 
-.stageRow {
+.navRow {
   position: relative;
   display: flex;
   align-items: center;
@@ -248,10 +188,11 @@
   text-align: left;
   flex-shrink: 0;
   overflow: visible;
+  color: #E4E4E4;
 }
 
 /* Hover pill — matches the Figma hover state, inset from the sidebar edges */
-.stageRow::before {
+.navRow::before {
   content: '';
   position: absolute;
   inset: 0 6px;
@@ -262,11 +203,11 @@
   pointer-events: none;
 }
 
-.stageRow:not(.stageLocked):hover::before {
+.navRow:hover::before {
   background: #2F2F2F;
 }
 
-.stageIcon {
+.navIcon {
   position: relative;
   z-index: 1;
   display: flex;
@@ -278,7 +219,7 @@
   overflow: visible;
 }
 
-.stageLabel {
+.navLabel {
   position: relative;
   z-index: 1;
   font-family: var(--font-sidebar-body);
@@ -289,58 +230,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Active — currently selected stage */
-.stageActive {
-  padding-left: 20px;
-}
-
-.stageActive::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 2px;
-  bottom: 2px;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background: #2563EB;
-  z-index: 1;
-}
-
-.stageActive .stageIcon,
-.stageActive .stageLabel {
-  color: #E4E4E4;
-}
-
-/* Accessible — unlocked but not the current stage */
-.stageAccessible .stageIcon,
-.stageAccessible .stageLabel {
-  color: #E4E4E4;
-}
-
-/* Locked — inactive component, WCAG 1.4.3 exempt */
-.stageLocked {
-  cursor: not-allowed;
-}
-
-.stageLocked .stageIcon,
-.stageLocked .stageLabel {
-  color: #6B6B6B;
-}
-
-@keyframes pulseDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.4; transform: scale(0.7); }
-}
-
-.stageLockIcon {
-  display: flex;
-  align-items: center;
-  color: #6B6B6B;
-  opacity: 0.6;
-  margin-left: auto;
-  flex-shrink: 0;
 }
 
 /* ── Project section ── */
@@ -385,6 +274,11 @@
   animation: pulseDot 1.4s ease-in-out infinite;
 }
 
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.4; transform: scale(0.7); }
+}
+
 .statusLabel {
   font-family: var(--font-sidebar-body);
   font-size: 10px;
@@ -405,86 +299,27 @@
   flex-direction: column;
 }
 
-.newProjectBtn {
-  height: 40px;
-  background: none;
-  border: none;
-  font-family: var(--font-sidebar-body);
-  font-weight: 500;
-  font-size: 12px;
-  color: #2C6BF6;
-  cursor: pointer;
+.settingsRow {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  transition: background 0.1s;
-}
-
-.newProjectBtn:hover {
-  background: rgba(44, 107, 246, 0.08);
-}
-
-.userRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 12px 16px;
 }
 
-.sidebarCollapsed .userRow {
-  flex-direction: column;
+.sidebarCollapsed .settingsRow {
   justify-content: center;
-  gap: 18px;
-  padding: 16px 8px;
-}
-
-.sidebarCollapsed .settingsBtn {
-  order: -1;
-}
-
-.userInfo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.userAvatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  background: #2563EB;
-  color: white;
-  font-family: var(--font-sidebar-body);
-  font-size: 11px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.userEmail {
-  font-family: var(--font-sidebar-body);
-  font-weight: 400;
-  font-size: 11px;
-  color: #8B837C;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding: 12px 8px;
 }
 
 .settingsBtn {
   background: none;
   border: none;
   padding: 0;
-  color: #BABABA;
   display: flex;
   align-items: center;
+  gap: 10px;
   cursor: pointer;
-  flex-shrink: 0;
-  opacity: 0.7;
+  color: #BABABA;
+  opacity: 0.85;
   transition: opacity 0.15s;
 }
 
