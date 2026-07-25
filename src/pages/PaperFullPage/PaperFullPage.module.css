@@ -146,66 +146,45 @@
   line-height: 1.75;
 }
 
-/* Wireframe pass (ticket 3.2) — split-pane LaTeX editor + compiled PDF.
-   Deliberately minimal: fixed (non-resizable) split, no custom editor
-   theming beyond CodeMirror's own default. Real compiled PDF only exists
-   when the backend actually had a LaTeX toolchain at recompile time —
-   rendered via the browser's own native PDF viewer, not a custom renderer. */
+/* Real compiled PDF (only exists when the backend actually had a LaTeX
+   toolchain available at generation time) — rendered via the browser's own
+   native PDF viewer, not a custom renderer. */
 .pdfSectionHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
-.saveBtn {
+.pdfDownloadLink {
   font-family: var(--font-body);
   font-size: 13px;
   font-weight: 500;
-  color: #FFFFFF;
-  background: var(--color-brand, #2D6A2D);
-  border: none;
-  border-radius: 6px;
-  padding: 6px 14px;
-  cursor: pointer;
+  color: var(--color-text-sec);
+  text-decoration: none;
+  transition: color 0.12s;
 }
 
-.saveBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.compileErrors {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  color: #B91C1C;
-  background: #FEF2F2;
-  border: 1px solid #FECACA;
-  border-radius: 6px;
-  padding: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-x: auto;
-}
-
-.editorSplit {
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
-  height: 640px;
-}
-
-.editorPane,
-.pdfPane {
-  flex: 1 1 0;
-  min-width: 0;
-  height: 100%;
-}
+.pdfDownloadLink:hover { color: var(--color-text-pri); }
 
 .pdfEmbed {
   width: 100%;
-  height: 100%;
+  height: 800px;
   border: 1px solid var(--color-border-def);
   border-radius: var(--radius-md, 8px);
+}
+
+/* Real, unabridged manuscript.tex. No LaTeX-aware renderer exists in this
+   app — pre-wrap + a monospace-leaning font keeps it fully readable as
+   source, which is the honest thing to show since this machine has no
+   LaTeX toolchain to compile it into anything else. */
+.fullDocument {
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
+  color: var(--color-text-pri);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
 }
 
 /* ── End footer ── */

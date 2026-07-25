@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
-import { LatexEditor } from '../../components/organisms/LatexEditor/LatexEditor';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { usePdfAvailability } from '../../hooks/usePdfAvailability';
@@ -57,36 +55,9 @@ export function PaperFullPage() {
   const result = pipeline?.stages['paper']?.result;
   const data = result?.stageData as PaperResultData | undefined;
   const backendProjectId = usePipelineStore(s => s.backendProjectId);
-
-  // Wireframe pass (ticket 3.2) — texContent seeds once from the real
-  // manuscript, then the editor owns it; cacheBust starts from the stage
-  // result's own generatedAt and gets replaced by a fresh recompile's
-  // compiled_at on Save, so usePdfAvailability actually re-checks.
-  const [texContent, setTexContent] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [compileErrors, setCompileErrors] = useState<string | null>(null);
-  const [cacheBust, setCacheBust] = useState<number | undefined>(undefined);
-
-  useEffect(() => {
-    if (result?.rawContent && texContent === null) setTexContent(result.rawContent);
-  }, [result?.rawContent, texContent]);
-
-  const effectiveCacheBust = cacheBust ?? result?.generatedAt;
-  const pdfAvailable = usePdfAvailability(backendProjectId, 'manuscript.pdf', effectiveCacheBust);
+  const pdfAvailable = usePdfAvailability(backendProjectId, 'manuscript.pdf', result?.generatedAt);
 
   const file = result?.file ?? 'manuscript.tex';
-
-  async function handleSave() {
-    if (!backendProjectId || texContent === null) return;
-    setSaving(true);
-    try {
-      const res = await api.recompilePaper(backendProjectId, texContent);
-      setCompileErrors(res.errors);
-      setCacheBust(res.compiled_at);
-    } finally {
-      setSaving(false);
-    }
-  }
 
   function handleBack() {
     navigate(`/project/${projectId}/stage/${stageId}`);
@@ -141,35 +112,30 @@ export function PaperFullPage() {
               </div>
             )}
 
-            <div className={styles.section}>
-              <div className={styles.pdfSectionHeader}>
-                <p className={styles.sectionLabel}>{file}</p>
-                <button className={styles.saveBtn} onClick={handleSave} disabled={saving || texContent === null}>
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-              </div>
-
-              {compileErrors && (
-                <pre className={styles.compileErrors}>{compileErrors}</pre>
-              )}
-
-              {texContent !== null ? (
-                <div className={styles.editorSplit}>
-                  <div className={styles.editorPane}>
-                    <LatexEditor value={texContent} onChange={setTexContent} />
-                  </div>
-                  <div className={styles.pdfPane}>
-                    {pdfAvailable && backendProjectId ? (
-                      <iframe
-                        src={api.fileUrl(backendProjectId, 'manuscript.pdf', effectiveCacheBust)}
-                        title="Compiled manuscript PDF"
-                        className={styles.pdfEmbed}
-                      />
-                    ) : (
-                      <p className={styles.prose}>No compiled PDF available.</p>
-                    )}
-                  </div>
+            {pdfAvailable && backendProjectId && (
+              <div className={styles.section}>
+                <div className={styles.pdfSectionHeader}>
+                  <p className={styles.sectionLabel}>Compiled PDF</p>
+                  <a
+                    className={styles.pdfDownloadLink}
+                    href={api.fileUrl(backendProjectId, 'manuscript.pdf', result?.generatedAt)}
+                    download="manuscript.pdf"
+                  >
+                    Download PDF
+                  </a>
                 </div>
+                <iframe
+                  src={api.fileUrl(backendProjectId, 'manuscript.pdf', result?.generatedAt)}
+                  title="Compiled manuscript PDF"
+                  className={styles.pdfEmbed}
+                />
+              </div>
+            )}
+
+            <div className={styles.section}>
+              <p className={styles.sectionLabel}>{file}</p>
+              {result?.rawContent ? (
+                <pre className={styles.fullDocument}>{result.rawContent}</pre>
               ) : (
                 <p className={styles.prose}>Manuscript not generated yet.</p>
               )}
