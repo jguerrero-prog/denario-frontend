@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { EditorView, basicSetup } from 'codemirror';
 import { EditorState } from '@codemirror/state';
 import { latex } from 'codemirror-lang-latex';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { lintGutter, setDiagnostics, type Diagnostic } from '@codemirror/lint';
 import styles from './LatexEditor.module.css';
 
@@ -16,11 +18,44 @@ interface LatexEditorProps {
   diagnostics?: LatexEditorDiagnostic[];
 }
 
-// Wireframe pass (ticket 3.2) — CodeMirror's own default theme, no custom
-// autocomplete/tooltip config beyond whatever latex() bundles by default.
-// Purpose is to see real proportions/behavior on the actual Paper page
-// before designing the real thing.
-//
+// Colors below mirror existing Denario tokens (--color-brand, --color-text-sec,
+// --color-text-pri, --color-text-decorative) rather than new hex values —
+// confirmed via Figma's variable defs that the design's syntax-highlight
+// palette already matches those tokens exactly. CodeMirror themes take a
+// static extension (no live CSS var resolution), so the token values are
+// duplicated here as literals; keep in sync with tokens.css if those change.
+const denarioHighlight = HighlightStyle.define([
+  { tag: tags.keyword, color: '#2D6A2D' },
+  { tag: tags.heading, color: '#2D6A2D' },
+  { tag: tags.comment, color: '#A89F96', fontStyle: 'italic' },
+  { tag: tags.bracket, color: '#6A6661' },
+  { tag: tags.content, color: '#1C1C18' },
+]);
+
+const denarioEditorTheme = EditorView.theme({
+  '&': {
+    fontSize: '12px',
+    height: '100%',
+    backgroundColor: '#FFFFFF',
+  },
+  '.cm-content': {
+    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+    caretColor: '#1C1C18',
+  },
+  '.cm-gutters': {
+    backgroundColor: '#FFFFFF',
+    color: '#1C1C18',
+    border: 'none',
+  },
+  '.cm-lineNumbers .cm-gutterElement': {
+    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+    fontSize: '11px',
+  },
+  '.cm-line': {
+    lineHeight: '20px',
+  },
+});
+
 // enableLinting is turned off deliberately: codemirror-lang-latex's own
 // structural linter (missing \begin{document}, unmatched environments, etc.)
 // shares CodeMirror's single lint state field with our own setDiagnostics()
@@ -43,6 +78,8 @@ export function LatexEditor({ value, onChange, diagnostics }: LatexEditorProps) 
         basicSetup,
         latex({ enableLinting: false }),
         lintGutter(),
+        syntaxHighlighting(denarioHighlight),
+        denarioEditorTheme,
         EditorView.updateListener.of(update => {
           if (update.docChanged) onChangeRef.current(update.state.doc.toString());
         }),

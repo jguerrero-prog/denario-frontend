@@ -6,14 +6,32 @@ import { usePdfAvailability } from '../../hooks/usePdfAvailability';
 import { api } from '../../api/client';
 import styles from './PaperPage.module.css';
 
-// Wireframe pass (ticket 3.2, relocated here per ticket 3.5) — the standalone
-// Paper workspace. This route carries no :projectId (see ROADMAP.md 3.5's
-// still-open cross-project-vs-per-project question), so it reads whichever
-// project is currently loaded in the store rather than hydrating one itself;
-// if none is open, shows an honest empty state instead of an editor with
-// nothing to edit. Deliberately minimal, same as the split-pane's first pass:
-// CodeMirror's own default theme, fixed non-resizable split, plain-text
-// compile errors, no lint-gutter wiring.
+type RightPanelTab = 'pdf' | 'summary' | 'logs' | 'suggestions';
+
+const RIGHT_PANEL_TABS: { key: RightPanelTab; label: string }[] = [
+  { key: 'pdf', label: 'PDF' },
+  { key: 'summary', label: 'Summary' },
+  { key: 'logs', label: 'Logs' },
+  { key: 'suggestions', label: 'Suggestions' },
+];
+
+function SendIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+// Design: Figma node 783:1614 ("Paper" split-pane redesign). Two pieces of
+// that design are deliberately rendered as static/non-functional scaffolding
+// only, per explicit product decision — not yet scoped:
+//   - the "Paper: {title} / Thread" pill tabs above the editor
+//   - the "Ask for a suggestion..." input bar below it
+// Everything else (right panel's PDF/Summary/Logs/Suggestions tabs +
+// Recompile button, editor theme) is real. Summary/Logs/Suggestions tabs
+// are static placeholder text — only PDF is wired to real data.
 export function PaperPage() {
   const pipeline = usePipelineStore(s => s.pipeline);
   const backendProjectId = usePipelineStore(s => s.backendProjectId);
@@ -25,6 +43,7 @@ export function PaperPage() {
   const [diagnostics, setDiagnostics] = useState<LatexEditorDiagnostic[]>([]);
   const [xelatexAvailable, setXelatexAvailable] = useState<boolean | null>(null);
   const [cacheBust, setCacheBust] = useState<number | undefined>(undefined);
+  const [rightTab, setRightTab] = useState<RightPanelTab>('pdf');
 
   useEffect(() => {
     if (result?.rawContent && texContent === null) setTexContent(result.rawContent);
@@ -47,57 +66,119 @@ export function PaperPage() {
     }
   }
 
+  if (!pipeline || !backendProjectId) {
+    return (
+      <div className={styles.layout}>
+        <Sidebar />
+        <main className={styles.main}>
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>Paper</p>
+            <p className={styles.subtitle}>No project open — open a project to edit its manuscript.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (texContent === null) {
+    return (
+      <div className={styles.layout}>
+        <Sidebar />
+        <main className={styles.main}>
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>Paper</p>
+            <p className={styles.subtitle}>Manuscript not generated yet.</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const title = result?.title ?? 'Manuscript';
+
   return (
     <div className={styles.layout}>
       <Sidebar />
       <main className={styles.main}>
-        {!pipeline || !backendProjectId ? (
-          <div className={styles.empty}>
-            <p className={styles.title}>Paper</p>
-            <p className={styles.subtitle}>No project open — open a project to edit its manuscript.</p>
-          </div>
-        ) : texContent === null ? (
-          <div className={styles.empty}>
-            <p className={styles.title}>Paper</p>
-            <p className={styles.subtitle}>Manuscript not generated yet.</p>
-          </div>
-        ) : (
-          <div className={styles.editorArea}>
-            <div className={styles.header}>
-              <p className={styles.title}>{result?.title ?? 'Manuscript'}</p>
-              <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
-              </button>
+        <div className={styles.editorColumn}>
+          <div className={styles.contextTabs}>
+            <div className={styles.contextTab} title={`Paper: ${title}`}>
+              <span className={styles.contextTabLabel}>Paper: {title}</span>
             </div>
+            <div className={styles.contextTab}>
+              <span className={styles.contextTabLabel}>Thread</span>
+            </div>
+          </div>
 
-            {xelatexAvailable === false && (
-              <p className={styles.xelatexWarning}>
-                PDF not regenerated — this backend has no LaTeX toolchain installed. Your edits were saved to the manuscript file, but the PDF on the right is unchanged.
-              </p>
-            )}
+          <div className={styles.editorPane}>
+            <LatexEditor value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
+          </div>
 
-            {compileErrors && (
-              <pre className={styles.compileErrors}>{compileErrors}</pre>
-            )}
+          {/* Static scaffolding per design (node 783:1846) — not wired to anything yet. */}
+          <form className={styles.aiBar} onSubmit={e => e.preventDefault()}>
+            <input
+              className={styles.aiBarInput}
+              placeholder="Ask for a suggestion, edit or structural change…"
+              disabled
+            />
+            <button type="submit" className={styles.aiBarSend} disabled aria-label="Send">
+              <SendIcon />
+            </button>
+          </form>
+        </div>
 
-            <div className={styles.editorSplit}>
-              <div className={styles.editorPane}>
-                <LatexEditor value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
-              </div>
-              <div className={styles.pdfPane}>
+        <div className={styles.rightPanel}>
+          <div className={styles.rightPanelHeader}>
+            <div className={styles.rightPanelTabs}>
+              {RIGHT_PANEL_TABS.map(tab => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  className={tab.key === rightTab ? styles.rightPanelTabActive : styles.rightPanelTab}
+                  onClick={() => setRightTab(tab.key)}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <button className={styles.recompileBtn} onClick={handleSave} disabled={saving}>
+              {saving ? 'Recompiling…' : 'Recompile'}
+            </button>
+          </div>
+
+          <div className={styles.rightPanelContent}>
+            {rightTab === 'pdf' && (
+              <>
+                {xelatexAvailable === false && (
+                  <p className={styles.xelatexWarning}>
+                    PDF not regenerated — this backend has no LaTeX toolchain installed. Your edits were saved to the manuscript file, but the PDF below is unchanged.
+                  </p>
+                )}
+                {compileErrors && (
+                  <pre className={styles.compileErrors}>{compileErrors}</pre>
+                )}
                 {pdfAvailable && backendProjectId ? (
                   <iframe
-                    src={api.fileUrl(backendProjectId, 'manuscript.pdf', effectiveCacheBust)}
+                    src={`${api.fileUrl(backendProjectId, 'manuscript.pdf', effectiveCacheBust)}#toolbar=0&navpanes=0&scrollbar=0`}
                     title="Compiled manuscript PDF"
                     className={styles.pdfEmbed}
                   />
                 ) : (
                   <p className={styles.subtitle}>No compiled PDF available.</p>
                 )}
-              </div>
-            </div>
+              </>
+            )}
+            {rightTab === 'summary' && (
+              <p className={styles.placeholderText}>Summary isn't scoped out yet — coming soon.</p>
+            )}
+            {rightTab === 'logs' && (
+              <p className={styles.placeholderText}>Logs aren't scoped out yet — coming soon.</p>
+            )}
+            {rightTab === 'suggestions' && (
+              <p className={styles.placeholderText}>Suggestions aren't scoped out yet — coming soon.</p>
+            )}
           </div>
-        )}
+        </div>
       </main>
     </div>
   );
