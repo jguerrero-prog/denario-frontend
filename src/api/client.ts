@@ -155,12 +155,13 @@ export const api = {
   // ── Paper endpoints ──────────────────────────────────────────────────────────
 
   recompilePaper(projectId: string, texContent: string): Promise<{
-    success:       boolean;
-    pdf_available: boolean;
-    errors:        string | null;
-    diagnostics:   { line: number | null; message: string }[];
-    log:           string | null;
-    compiled_at:   number;
+    success:           boolean;
+    pdf_available:     boolean;
+    xelatex_available: boolean;
+    errors:            string | null;
+    diagnostics:       { line: number | null; message: string }[];
+    log:               string | null;
+    compiled_at:       number;
   }> {
     return req(`/projects/${projectId}/paper/recompile`, {
       method: 'POST',

@@ -23,6 +23,7 @@ export function PaperPage() {
   const [saving, setSaving] = useState(false);
   const [compileErrors, setCompileErrors] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<LatexEditorDiagnostic[]>([]);
+  const [xelatexAvailable, setXelatexAvailable] = useState<boolean | null>(null);
   const [cacheBust, setCacheBust] = useState<number | undefined>(undefined);
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function PaperPage() {
       const res = await api.recompilePaper(backendProjectId, texContent);
       setCompileErrors(res.errors);
       setDiagnostics(res.diagnostics);
+      setXelatexAvailable(res.xelatex_available);
       setCacheBust(res.compiled_at);
     } finally {
       setSaving(false);
@@ -67,6 +69,12 @@ export function PaperPage() {
                 {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
+
+            {xelatexAvailable === false && (
+              <p className={styles.xelatexWarning}>
+                PDF not regenerated — this backend has no LaTeX toolchain installed. Your edits were saved to the manuscript file, but the PDF on the right is unchanged.
+              </p>
+            )}
 
             {compileErrors && (
               <pre className={styles.compileErrors}>{compileErrors}</pre>
