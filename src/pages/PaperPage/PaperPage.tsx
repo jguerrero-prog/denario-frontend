@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
-import { LatexEditor } from '../../components/organisms/LatexEditor/LatexEditor';
+import { LatexEditor, type LatexEditorDiagnostic } from '../../components/organisms/LatexEditor/LatexEditor';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { usePdfAvailability } from '../../hooks/usePdfAvailability';
 import { api } from '../../api/client';
@@ -22,6 +22,7 @@ export function PaperPage() {
   const [texContent, setTexContent] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [compileErrors, setCompileErrors] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<LatexEditorDiagnostic[]>([]);
   const [cacheBust, setCacheBust] = useState<number | undefined>(undefined);
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export function PaperPage() {
     try {
       const res = await api.recompilePaper(backendProjectId, texContent);
       setCompileErrors(res.errors);
+      setDiagnostics(res.diagnostics);
       setCacheBust(res.compiled_at);
     } finally {
       setSaving(false);
@@ -72,7 +74,7 @@ export function PaperPage() {
 
             <div className={styles.editorSplit}>
               <div className={styles.editorPane}>
-                <LatexEditor value={texContent} onChange={setTexContent} />
+                <LatexEditor value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
               </div>
               <div className={styles.pdfPane}>
                 {pdfAvailable && backendProjectId ? (

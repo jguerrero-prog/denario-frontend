@@ -158,6 +158,7 @@ export const api = {
     success:       boolean;
     pdf_available: boolean;
     errors:        string | null;
+    diagnostics:   { line: number | null; message: string }[];
     log:           string | null;
     compiled_at:   number;
   }> {

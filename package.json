@@ -12,6 +12,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@codemirror/lint": "^6.9.7",
     "@codemirror/state": "^6.7.1",
     "codemirror": "^6.0.2",
     "codemirror-lang-latex": "^0.4.2",
