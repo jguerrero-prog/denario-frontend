@@ -104,7 +104,6 @@ export function PaperPage() {
         <div className={styles.editorColumn}>
           <div className={styles.tabStrip}>
             <div className={styles.tabActive} title={`Paper: ${title}`}>
-              <span className={styles.tabDot} />
               <span className={styles.tabLabel}>Paper: {title}</span>
             </div>
             <div className={styles.tabInactive}>

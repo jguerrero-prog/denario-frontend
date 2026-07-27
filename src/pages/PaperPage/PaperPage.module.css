@@ -65,7 +65,6 @@
 .tabActive {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
   height: 40px;
   padding: 10px var(--space-5);
   background: var(--color-bg-card);
@@ -74,14 +73,6 @@
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   box-sizing: border-box;
   max-width: 260px;
-}
-
-.tabDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-brand);
-  flex-shrink: 0;
 }
 
 .tabLabel {
@@ -121,7 +112,6 @@
 .tabFiller {
   flex: 1 1 0;
   height: 40px;
-  border-bottom: 1px solid var(--color-border-def);
 }
 
 .editorCard {
