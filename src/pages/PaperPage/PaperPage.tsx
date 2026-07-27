@@ -40,11 +40,19 @@ export function PaperPage() {
 
   const [texContent, setTexContent] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [fixing, setFixing] = useState(false);
   const [compileErrors, setCompileErrors] = useState<string | null>(null);
   const [diagnostics, setDiagnostics] = useState<LatexEditorDiagnostic[]>([]);
   const [xelatexAvailable, setXelatexAvailable] = useState<boolean | null>(null);
+  const [llmError, setLlmError] = useState<string | null>(null);
   const [cacheBust, setCacheBust] = useState<number | undefined>(undefined);
   const [rightTab, setRightTab] = useState<RightPanelTab>('pdf');
+  // Bumped whenever auto-fix replaces the buffer wholesale, forcing
+  // LatexEditor to remount — it deliberately never syncs external `value`
+  // changes into an already-mounted instance (that would fight the user's
+  // live cursor position while typing), so a one-time full content swap
+  // needs a fresh instance instead.
+  const [editorKey, setEditorKey] = useState(0);
 
   useEffect(() => {
     if (result?.rawContent && texContent === null) setTexContent(result.rawContent);
@@ -64,6 +72,24 @@ export function PaperPage() {
       setCacheBust(res.compiled_at);
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleAutoFix() {
+    if (!backendProjectId || texContent === null) return;
+    setFixing(true);
+    setLlmError(null);
+    try {
+      const res = await api.autoFixPaper(backendProjectId, texContent);
+      setTexContent(res.fixed_tex);
+      setEditorKey(k => k + 1);
+      setCompileErrors(res.errors);
+      setDiagnostics(res.diagnostics);
+      setXelatexAvailable(res.xelatex_available);
+      setCacheBust(res.compiled_at);
+      setLlmError(res.llm_error);
+    } finally {
+      setFixing(false);
     }
   }
 
@@ -114,7 +140,7 @@ export function PaperPage() {
 
           <div className={styles.editorCard}>
             <div className={styles.editorPane}>
-              <LatexEditor value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
+              <LatexEditor key={editorKey} value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
             </div>
 
             {/* Static scaffolding per design (node 797:2152) — not wired to anything yet. */}
@@ -159,7 +185,17 @@ export function PaperPage() {
                   </p>
                 )}
                 {compileErrors && (
-                  <pre className={styles.compileErrors}>{compileErrors}</pre>
+                  <>
+                    <pre className={styles.compileErrors}>{compileErrors}</pre>
+                    <button className={styles.autoFixBtn} onClick={handleAutoFix} disabled={fixing || saving}>
+                      {fixing ? 'Auto-fixing…' : 'Auto-fix'}
+                    </button>
+                  </>
+                )}
+                {llmError && (
+                  <p className={styles.xelatexWarning}>
+                    Auto-fix couldn't reach the model: {llmError}
+                  </p>
                 )}
                 {pdfAvailable && backendProjectId ? (
                   <iframe

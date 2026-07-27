@@ -284,6 +284,25 @@
   flex-shrink: 0;
 }
 
+.autoFixBtn {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-pri);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-def);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.autoFixBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .pdfEmbed {
   width: 100%;
   flex: 1 1 0;

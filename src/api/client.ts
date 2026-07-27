@@ -169,6 +169,25 @@ export const api = {
     });
   },
 
+  autoFixPaper(projectId: string, texContent: string): Promise<{
+    success:           boolean;
+    pdf_available:     boolean;
+    xelatex_available: boolean;
+    errors:            string | null;
+    diagnostics:       { line: number | null; message: string }[];
+    log:               string | null;
+    compiled_at:       number;
+    fixed_tex:         string;
+    attempts:          number;
+    fixed:             boolean;
+    llm_error:         string | null;
+  }> {
+    return req(`/projects/${projectId}/paper/auto-fix`, {
+      method: 'POST',
+      body: JSON.stringify({ tex_content: texContent }),
+    });
+  },
+
   // ── File URLs ────────────────────────────────────────────────────────────────
 
   fileUrl(projectId: string, filePath: string, cacheBust?: number): string {
