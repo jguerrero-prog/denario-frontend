@@ -80,6 +80,7 @@ export function LatexEditor({ value, onChange, diagnostics }: LatexEditorProps) 
         lintGutter(),
         syntaxHighlighting(denarioHighlight),
         denarioEditorTheme,
+        EditorView.lineWrapping,
         EditorView.updateListener.of(update => {
           if (update.docChanged) onChangeRef.current(update.state.doc.toString());
         }),
