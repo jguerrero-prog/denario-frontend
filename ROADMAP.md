@@ -57,7 +57,6 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 |--------|----|
 | 2.2 Idea adversarial log (Rigorous track) | 3 |
 | 4.2 → 4.3 Interactive plots (backend render → popup) | 8 / 8 |
-| 5.1 → 5.2 Literature corpus (parse → table) | 3 / 3 |
 | 4.4 Browsable data tables | 3 |
 
 ### Phase 3 — Structural / decision-gated
@@ -171,13 +170,10 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Next:** ticket 3.2 (split-pane CodeMirror editor) — no UI built yet, this ticket is the backend + API client method only.
 
 ### 3.2 Split-pane LaTeX editor + live PDF preview
-- **Status:** Blocked · **SP:** 8 · **Needs design:** Yes · **Hard pivot:** —
-- **Description:** Replace the read-only source dump in `PaperFullPage` with a real editor: CodeMirror + LaTeX syntax highlighting on the left, the existing native PDF iframe on the right, an explicit Save (not autosave — consistent with the Approve-&-Proceed model).
-- **Dependencies:** 3.1, 1.5
-- **User impact:** Researchers can edit the manuscript and see the recompiled PDF without leaving Denario.
-- **Blockers:** 3.1 (recompile endpoint), 1.5 (page must survive refresh first)
-- **Files likely touched:** `src/pages/PaperFullPage/PaperFullPage.tsx` (+ `.module.css`), new `src/components/organisms/LatexEditor/`, `src/api/client.ts`, `src/types/pipeline.ts`; new deps `codemirror-lang-latex`, `@codemirror/lint`
-- **Claude suggestion:** `codemirror-lang-latex` (verified: actively published, best feature fit) for highlighting/folding; `@codemirror/lint` to render compile errors as inline diagnostics at the right line rather than a flat error panel; keep editing available even when no PDF can be produced.
+- **Status:** Shipped (2026-07-25, redesigned 2026-07-26/27) · **SP:** 8 · **Needs design:** No · **Hard pivot:** —
+- **Description:** A real editor — CodeMirror + LaTeX syntax highlighting, lint-gutter diagnostics from real compile errors, line wrapping — alongside the PDF preview, with an explicit Save/Recompile (not autosave).
+- **Note:** ended up living in the standalone `PaperPage` (ticket 3.5), not `PaperFullPage` as originally scoped — see 3.5's own entry. Redesigned twice against real Figma nodes (783:1614, then 797:2043) into the current folder-tab layout with a PDF/Summary/Logs/Suggestions right panel.
+- **Files touched:** `src/components/organisms/LatexEditor/`, `src/pages/PaperPage/`, `src/api/client.ts`, `src/types/pipeline.ts`; deps `codemirror-lang-latex`, `@codemirror/lint`, `@codemirror/language`, `@lezer/highlight`
 
 ### 3.3 One-click auto-fix for compile errors
 - **Status:** Shipped (2026-07-27) · **SP:** 5 · **Needs design:** No · **Hard pivot:** resolved
@@ -199,16 +195,15 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Hard pivot (decided):** the editor's raw `.tex` buffer is the source of truth once the editor ships; this **supersedes** the old structured-field section-rewrite approach (was Compose Bar 6.8).
 
 ### 3.5 Standalone "Paper" workspace (new sidebar nav destination)
-- **Status:** Ready (placeholder shipped 2026-07-24) · **SP:** needs estimate · **Needs design:** Yes · **Hard pivot:** —
-- **Description:** The sidebar redesign (2026-07-24) added a "Paper" nav item routing to `/paper` (`src/pages/PaperPage/`), intended as a dedicated manuscript-editing space distinct from the per-project `PaperFullPage` (which only shows the *current* project's Paper stage). Today it's a bare "coming soon" placeholder. Real scope: is this a global cross-project manuscript picker + editor, or does it just deep-link into the currently-open project's manuscript once 3.2's editor exists? Needs a decision before building past the placeholder.
-- **Dependencies:** 3.1 (recompile endpoint), 3.2 (split-pane editor) — this is effectively the "where does the editor live" question for that epic, not new editor functionality itself.
-- **User impact:** A dedicated place to work on the manuscript without navigating through a specific project's stage flow — exact value depends on the cross-project vs. per-project decision above.
-- **Blockers:** 3.2 not built yet; scope decision above not made.
-- **Files likely touched:** `src/pages/PaperPage/PaperPage.tsx` (replace placeholder), depends on wherever 3.2's editor component ends up living.
-- **Claude suggestion:** Don't build this until 3.2 exists — right now it would just be a second empty shell pointing at nothing. Decide the cross-project-vs-per-project question first; it changes the routing shape (`/paper` vs `/paper/:projectId`).
+- **Status:** Shipped (2026-07-25/27) · **SP:** — · **Needs design:** No · **Hard pivot:** resolved
+- **Description:** `/paper` (`src/pages/PaperPage/`) now hosts the real split-pane editor from 3.2, not a placeholder.
+- **Cross-project-vs-per-project, resolved by implementation:** `PaperPage` reads whichever project is currently loaded in `usePipelineStore` globally (no `:projectId` route param) — it's a deep-link into the currently-open project's manuscript, not a global cross-project picker. Shows an honest empty state ("No project open") if none is loaded.
+- **Files touched:** `src/pages/PaperPage/PaperPage.tsx` (+ `.module.css`)
 
 ### Open design questions (decide during 3.2–3.4)
-`.bib` editability (in scope or `.tex`-only?) · how a manual edit interacts with the Approve-&-Proceed stage gate · whether auto-fix (3.3) is automatic after a failed save or an explicit click.
+`.bib` editability (in scope or `.tex`-only?) · how a manual edit interacts with the Approve-&-Proceed stage gate.
+
+**Resolved:** auto-fix (3.3) is an explicit button, not automatic after a failed save — matches the app's explicit-controls pattern.
 
 ---
 
@@ -270,22 +265,16 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 *Show all the papers the search actually found (not just the 3 cited), and check novelty earlier in the pipeline.*
 
 ### 5.1 Parse the full searched corpus into structured sidecars (backend)
-- **Status:** Ready · **SP:** 3 · **Needs design:** No · **Hard pivot:** —
+- **Status:** Shipped · **SP:** 3 · **Needs design:** No · **Hard pivot:** —
 - **Description:** The literature search finds ~43 papers across multiple query rounds but only the 3 cited ones reach the UI. Parse the deterministic `.log` files into structured sidecars.
-- **Dependencies:** none
-- **User impact:** Makes the full breadth of the search available to the UI — foundation for the transparency the tool promises.
-- **Blockers:** none
-- **Files likely touched:** new `denario/papers_log_parser.py`, `denario/denario.py` (invoke in the literature flow)
-- **Claude suggestion:** Same pattern as the existing `literature.json`/`results.json` parsers — Python-side, writing `papers_processed.json` (+ optional `literature_rounds.json`). The `.log` files are code-formatted and deterministic, easier to parse than the LLM prose already handled.
+- **Files touched:** `denario/papers_log_parser.py`, `denario/denario.py`
 
-### 5.2 "Related Literature" table + "how this was searched" trail
-- **Status:** Blocked · **SP:** 3 · **Needs design:** Yes · **Hard pivot:** —
-- **Description:** A collapsible table (title / authors / abstract snippet / link) of the full searched corpus, shown in both the conversation card and the full page, plus an optional round-by-round query trail.
-- **Dependencies:** 5.1
-- **User impact:** Researchers see the real breadth of the search and can catch papers the LLM's summary skipped — directly serves the transparency premise.
-- **Blockers:** 5.1
-- **Files likely touched:** `src/pages/LiteratureFullPage/LiteratureFullPage.tsx`, `src/pages/StagePage/ResultCards/ResultCards.tsx` (Literature card), new collapsible-table component, `src/types/pipeline.ts`
-- **Claude suggestion:** Keep it distinct from the existing "Most Relevant Papers" comparison section (don't fabricate similarities/differences for papers the LLM never compared); truncated abstract snippets in the table, full text behind a per-row expand.
+### 5.2 "Related Literature" list + "how this was searched" trail
+- **Status:** Mostly shipped (2026-07-27) · **SP:** 3 · **Needs design:** No · **Hard pivot:** —
+- **Description:** The full searched corpus (not just the 3 cited papers), shown as a 3-paper teaser in the conversation card and in full on the Literature full page, plus an optional round-by-round query trail.
+- **Shipped:** the conversation-thread teaser (`PublicationCard`, 3 papers) and the full-page "All Searched Papers (N)" section (all papers, via `PublicationCard`) both already existed from earlier session work — as a card list, not the table format originally specified, but serving the same transparency purpose. 2026-07-27 added the missing piece: the full-page section defaults collapsed with a chevron toggle, since a real search returns 29–40+ papers and the list previously always rendered fully expanded.
+- **Not built (explicitly deferred, ticket itself calls it optional):** the round-by-round "how this was searched" query trail — `papers_log_parser.py` dedupes across rounds internally but never exposes which round found what. Table-vs-cards was also explicitly left as cards per product decision (2026-07-27) rather than converted to the originally-specified table format.
+- **Files touched:** `src/pages/LiteratureFullPage/LiteratureFullPage.tsx` (+ `.module.css`)
 
 ### 5.3 Move Literature Review earlier (stage 6 → 3)
 - **Status:** Ready (mechanically) · **SP:** 3 · **Needs design:** No · **Hard pivot:** yes
