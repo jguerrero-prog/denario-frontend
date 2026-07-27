@@ -47,7 +47,6 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 
 | Ticket | SP | Unblocks |
 |--------|----|----------|
-| 1.5 Full-page views survive refresh & hot-reload | 2 | 3.2 |
 | 2.1 Harden & generalize the reasoning-log renderer | 3 | 2.2 |
 | 4.1 Preserve scripts/data + plot→script map | 5 | 4.2, 4.3, 4.4 |
 
@@ -114,13 +113,10 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** Source captions from real `structured.sections`/`findings` that reference each filename; delete the mock SVG charts.
 
 ### 1.5 Full-page views survive refresh & hot-reload
-- **Status:** Ready · **SP:** 2 · **Needs design:** No · **Hard pivot:** — · **Foundational (blocks 3.2)**
+- **Status:** Shipped (commit `c725858`) · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
 - **Description:** Idea/Methods/Paper full pages read pipeline state directly from the store and go blank on a raw refresh or a dev hot-reload. Analysis was already fixed with a shared hook; extend it.
-- **Dependencies:** none
-- **User impact:** Full-page views reliably show content instead of blanking out; also a prerequisite for the LaTeX editor, which lives in `PaperFullPage`.
-- **Blockers:** none
-- **Files likely touched:** `src/pages/IdeaFullPage/IdeaFullPage.tsx`, `src/pages/MethodsFullPage/MethodsFullPage.tsx`, `src/pages/PaperFullPage/PaperFullPage.tsx` (reuse `src/hooks/useHydratedPipeline.ts`)
-- **Claude suggestion:** Purely additive — swap the direct store read for `useHydratedPipeline` and add the two early-return guards, same as `AnalysisFullPage`.
+- **Verified:** every `*FullPage` component (Analysis, Idea, Keywords, Literature, Methods, Paper, Referee) uses `useHydratedPipeline` with the `fetchFailed`/`needsFetch` guards — confirmed by grep across all seven files, not just the three originally scoped.
+- **Files touched:** `src/hooks/useHydratedPipeline.ts` + all `src/pages/*FullPage/*FullPage.tsx`
 
 ### 1.6 Honor the `model_overrides` field
 - **Status:** Ready · **SP:** 2 → needs re-estimate (see note) · **Needs design:** Yes (new settings screen) · **Hard pivot:** —
