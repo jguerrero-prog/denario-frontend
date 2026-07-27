@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
@@ -51,6 +52,17 @@ function CopyIcon() {
   );
 }
 
+function ChevronDownIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`${styles.sectionChevron} ${open ? styles.sectionChevronOpen : ''}`}
+      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+    >
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function LiteratureFullPage() {
@@ -62,6 +74,11 @@ export function LiteratureFullPage() {
   const structured = data?.structured;
 
   const file = result?.file ?? 'literature.md';
+
+  // Defaults collapsed — the full searched corpus can be 40+ papers and
+  // shouldn't dominate the page by default; available on demand, matching
+  // this ticket's "transparency, not noise" intent.
+  const [papersExpanded, setPapersExpanded] = useState(false);
 
   function handleBack() {
     navigate(`/project/${projectId}/stage/${stageId}`);
@@ -134,12 +151,22 @@ export function LiteratureFullPage() {
                     differences for papers the LLM never compared. */}
                 {data && data.searchedPapers.length > 0 && (
                   <div className={styles.section}>
-                    <p className={styles.sectionLabel}>All Searched Papers ({data.searchedPapers.length})</p>
-                    <div className={styles.publicationList}>
-                      {data.searchedPapers.map((paper, i) => (
-                        <PublicationCard key={paper.url ?? i} paper={paper} />
-                      ))}
-                    </div>
+                    <button
+                      type="button"
+                      className={styles.sectionLabelToggle}
+                      onClick={() => setPapersExpanded(e => !e)}
+                      aria-expanded={papersExpanded}
+                    >
+                      <ChevronDownIcon open={papersExpanded} />
+                      <span className={styles.sectionLabel}>All Searched Papers ({data.searchedPapers.length})</span>
+                    </button>
+                    {papersExpanded && (
+                      <div className={styles.publicationList}>
+                        {data.searchedPapers.map((paper, i) => (
+                          <PublicationCard key={paper.url ?? i} paper={paper} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
