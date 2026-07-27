@@ -120,7 +120,6 @@ export function Sidebar({ projectName }: SidebarProps) {
   return (
     <>
     <div className={`${styles.sidebarShell} ${collapsed ? styles.sidebarShellCollapsed : ''}`}>
-    <div className={styles.sidebarBacking} />
     <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}>
       {/* Top: wordmark + brand bar + collapse */}
       <div className={styles.sidebarTop}>

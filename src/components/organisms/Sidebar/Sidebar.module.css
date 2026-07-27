@@ -29,14 +29,6 @@
   width: calc(56px + 12px + 12px);
 }
 
-.sidebarBacking {
-  position: absolute;
-  inset: 0;
-  background: transparent;
-  border-right: 0.5px solid #EAEAEA;
-  z-index: 0;
-}
-
 .sidebar {
   --font-sidebar-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
 

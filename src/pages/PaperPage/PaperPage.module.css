@@ -4,9 +4,7 @@
   height: 100vh;
   background: var(--color-bg-card);
   overflow: hidden;
-  padding: var(--space-2);
-  gap: var(--space-2);
-  box-sizing: border-box;
+  gap: 12px;
 }
 
 .main {
@@ -16,6 +14,8 @@
   gap: var(--space-2);
   min-width: 0;
   overflow: hidden;
+  padding: var(--space-2);
+  box-sizing: border-box;
 }
 
 .empty {
