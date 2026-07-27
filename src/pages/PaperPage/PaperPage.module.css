@@ -4,12 +4,16 @@
   height: 100vh;
   background: var(--color-bg-app);
   overflow: hidden;
+  padding: var(--space-2);
+  gap: var(--space-2);
+  box-sizing: border-box;
 }
 
 .main {
   flex: 1 1 0;
   display: flex;
   flex-direction: row;
+  gap: var(--space-2);
   min-width: 0;
   overflow: hidden;
 }
@@ -41,54 +45,110 @@
   line-height: 1.5;
 }
 
-/* ── Editor column (design: Figma node 783:1614) ── */
+/* ── Editor column (design: Figma node 797:2043 — folder-tab layout) ── */
 
 .editorColumn {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
   min-width: 0;
   min-height: 0;
-  padding: var(--space-4) 0 var(--space-4) var(--space-4);
 }
 
-.contextTabs {
+.tabStrip {
   display: flex;
-  gap: var(--space-1);
+  align-items: flex-end;
+  height: 40px;
   flex-shrink: 0;
 }
 
-.contextTab {
+.tabActive {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 10px var(--space-5);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border-def);
-  border-radius: var(--radius-lg);
-  padding: 6px var(--space-4);
-  max-width: 220px;
+  border-bottom: none;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  box-sizing: border-box;
+  max-width: 260px;
 }
 
-.contextTabLabel {
+.tabDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  flex-shrink: 0;
+}
+
+.tabLabel {
   font-family: 'Instrument Sans Variable', sans-serif;
-  font-size: var(--text-sm);
+  font-size: 12px;
+  font-weight: 500;
   color: var(--color-text-pri);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: block;
+}
+
+.tabInactive {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  width: 193px;
+  flex-shrink: 0;
+  padding: 10px var(--space-5);
+  background: #F4F4F4;
+  border: 1px solid var(--color-border-def);
+  border-left: none;
+  border-radius: 0 var(--radius-md) 0 0;
+  box-sizing: border-box;
+}
+
+.tabLabelInactive {
+  font-family: 'Instrument Sans Variable', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #666666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tabFiller {
+  flex: 1 1 0;
+  height: 40px;
+  border-bottom: 1px solid var(--color-border-def);
+}
+
+.editorCard {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-def);
+  border-top: none;
+  border-radius: 0 var(--radius-xl) var(--radius-xl) var(--radius-xl);
+  padding: 0 var(--space-8) var(--space-8) var(--space-8);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .editorPane {
   flex: 1 1 0;
   min-height: 0;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
 .aiBar {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-12);
   background: var(--color-bg-card);
   border: 1px solid var(--color-border-def);
   border-radius: var(--radius-pill);
@@ -124,14 +184,16 @@
 /* ── Right panel (design: Figma node 785:127) ── */
 
 .rightPanel {
-  width: 546px;
+  width: 485px;
   flex-shrink: 0;
   height: 100%;
-  background: #F1F1F1;
+  background: #F4F4F4;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-4);
+  padding: 13px var(--space-4) var(--space-4) var(--space-4);
+  border-radius: var(--radius-xl);
+  box-sizing: border-box;
   overflow: hidden;
 }
 

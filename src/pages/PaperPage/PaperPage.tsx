@@ -24,10 +24,11 @@ function SendIcon() {
   );
 }
 
-// Design: Figma node 783:1614 ("Paper" split-pane redesign). Two pieces of
-// that design are deliberately rendered as static/non-functional scaffolding
-// only, per explicit product decision — not yet scoped:
-//   - the "Paper: {title} / Thread" pill tabs above the editor
+// Design: Figma node 797:2043 (folder-tab layout revision of the "Paper"
+// split-pane, superseding node 783:1614's pill-style tabs). Two pieces of
+// the design remain deliberately static/non-functional scaffolding, per the
+// same product decision as before — not yet scoped:
+//   - the "Paper: {title} / Thread" folder tabs above the editor
 //   - the "Ask for a suggestion..." input bar below it
 // Everything else (right panel's PDF/Summary/Logs/Suggestions tabs +
 // Recompile button, editor theme) is real. Summary/Logs/Suggestions tabs
@@ -101,30 +102,34 @@ export function PaperPage() {
       <Sidebar />
       <main className={styles.main}>
         <div className={styles.editorColumn}>
-          <div className={styles.contextTabs}>
-            <div className={styles.contextTab} title={`Paper: ${title}`}>
-              <span className={styles.contextTabLabel}>Paper: {title}</span>
+          <div className={styles.tabStrip}>
+            <div className={styles.tabActive} title={`Paper: ${title}`}>
+              <span className={styles.tabDot} />
+              <span className={styles.tabLabel}>Paper: {title}</span>
             </div>
-            <div className={styles.contextTab}>
-              <span className={styles.contextTabLabel}>Thread</span>
+            <div className={styles.tabInactive}>
+              <span className={styles.tabLabelInactive}>Thread</span>
             </div>
+            <div className={styles.tabFiller} />
           </div>
 
-          <div className={styles.editorPane}>
-            <LatexEditor value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
-          </div>
+          <div className={styles.editorCard}>
+            <div className={styles.editorPane}>
+              <LatexEditor value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
+            </div>
 
-          {/* Static scaffolding per design (node 783:1846) — not wired to anything yet. */}
-          <form className={styles.aiBar} onSubmit={e => e.preventDefault()}>
-            <input
-              className={styles.aiBarInput}
-              placeholder="Ask for a suggestion, edit or structural change…"
-              disabled
-            />
-            <button type="submit" className={styles.aiBarSend} disabled aria-label="Send">
-              <SendIcon />
-            </button>
-          </form>
+            {/* Static scaffolding per design (node 797:2152) — not wired to anything yet. */}
+            <form className={styles.aiBar} onSubmit={e => e.preventDefault()}>
+              <input
+                className={styles.aiBarInput}
+                placeholder="Ask for a suggestion, edit or structural change…"
+                disabled
+              />
+              <button type="submit" className={styles.aiBarSend} disabled aria-label="Send">
+                <SendIcon />
+              </button>
+            </form>
+          </div>
         </div>
 
         <div className={styles.rightPanel}>
