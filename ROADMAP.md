@@ -56,7 +56,6 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 | Ticket | SP |
 |--------|----|
 | 2.2 Idea adversarial log (Rigorous track) | 3 |
-| 3.1 → 3.2 → 3.3 LaTeX editor (recompile → editor → auto-fix) | 3 / 8 / 5 |
 | 4.2 → 4.3 Interactive plots (backend render → popup) | 8 / 8 |
 | 5.1 → 5.2 Literature corpus (parse → table) | 3 / 3 |
 | 4.4 Browsable data tables | 3 |
@@ -181,14 +180,13 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** `codemirror-lang-latex` (verified: actively published, best feature fit) for highlighting/folding; `@codemirror/lint` to render compile errors as inline diagnostics at the right line rather than a flat error panel; keep editing available even when no PDF can be produced.
 
 ### 3.3 One-click auto-fix for compile errors
-- **Status:** Blocked · **SP:** 5 · **Needs design:** Yes · **Hard pivot:** see note
-- **Description:** Expose the existing `fix_latex()` "detect error → LLM-rewrite → retry" loop as an explicit editor action.
-- **Dependencies:** 3.1
+- **Status:** Shipped (2026-07-27) · **SP:** 5 · **Needs design:** No · **Hard pivot:** resolved
+- **Description:** Expose an LLM "detect error → rewrite → retry" loop as an explicit editor action.
+- **Dependencies:** 3.1 (done)
 - **User impact:** When a manuscript won't compile, one click attempts an automated fix instead of manual LaTeX debugging.
-- **Blockers:** 3.1
-- **Files likely touched:** `denario/paper_agents/latex.py` (`fix_latex`), `denario/paper_agents/prompts.py` (`fix_latex_bug_prompt`), same endpoint as 3.1
-- **Claude suggestion:** `fix_latex()` currently expects a single named `section_to_fix` — a whole-document edit doesn't map to that. Decide between error-log→section detection or a coarser whole-doc fix path **before** building. Lean toward an explicit button (not auto-fire) to match the app's explicit-controls pattern.
-- **Hard pivot (small):** the `section_to_fix` mismatch above is a real design fork — resolve first.
+- **Files touched:** `denario/paper_agents/manuscript_edit.py` (new `auto_fix_manuscript`/`fix_manuscript_bug_prompt`/`_build_fix_state`), `api/routes/paper.py` (new `/paper/auto-fix` route), `src/api/client.ts` (`autoFixPaper`), `src/pages/PaperPage/PaperPage.tsx` (Auto-fix button)
+- **Hard pivot (resolved):** `fix_latex()` patches one named section (`state['paper'][section_to_fix]`), a structured-field model from the original multi-agent generation flow — doesn't map to our whole-document editor. Built new code instead: `auto_fix_manuscript()` rewrites and recompiles the whole `.tex` buffer, reusing `recompile_manuscript()` (3.1) for each attempt's compile+persist step. Consistent with 3.4's already-decided "raw buffer is the source of truth" pivot. `fix_latex()` itself is untouched — still used by the original generation-time flow.
+- **Verified:** three mocked scenarios (this dev machine has neither xelatex nor API keys) — a real missing-credentials failure degrading honestly (found that `ChatGoogleGenerativeAI` fails at *construction* time with no key, not lazily at `.invoke()`), a fix-succeeds-on-attempt-1 retry loop, and giving up cleanly after 3 failed attempts — plus the real endpoint via TestClient and the full UI flow via Playwright (button visibility, editor content swap on success).
 
 ### 3.4 Chat-driven full-document edits
 - **Status:** Blocked · **SP:** 5 · **Needs design:** No (uses 3.2's editor) · **Hard pivot:** decided
