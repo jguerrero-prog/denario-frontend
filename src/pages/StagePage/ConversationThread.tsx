@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { startStage, stopStage } from '../../utils/stageRunner';
+import { api } from '../../api/client';
 import { StageResultCard } from './ResultCards/ResultCards';
 import { STAGE_ORDER, STAGE_CONFIG } from '../../config/stageConfig';
 import { ParamSelect, ParamToggle, ParamNumber } from '../../components/molecules/ParamControls/ParamControls';
@@ -466,7 +467,9 @@ function ComposeBarPopover({
 function ComposeBar({ stageId }: { stageId: StageId }) {
   const [text, setText] = useState('');
   const addMessage = usePipelineStore(s => s.addMessage);
+  const updateMessage = usePipelineStore(s => s.updateMessage);
   const pipeline = usePipelineStore(s => s.pipeline);
+  const backendProjectId = usePipelineStore(s => s.backendProjectId);
   const stage = pipeline?.stages[stageId];
   const isRunning = stage?.status === 'running';
   const inputRef = useRef<HTMLInputElement>(null);
@@ -508,11 +511,50 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
-  function submit() {
+  // ROADMAP.md ticket 6.3/6.4 wiring. The placeholder text already draws the
+  // real scope line: "discuss the results" (stage complete) is the general
+  // project Q&A assistant — real backend call, below. "add more context"
+  // (stage not complete) is a different, unbuilt capability (feeding input
+  // into an upcoming/current generation) — stays local-only for now, not
+  // conflated with the assistant.
+  async function submit() {
     const trimmed = text.trim();
     if (!trimmed) return;
     addMessage({ role: 'user', type: 'text', content: trimmed, stageId });
     setText('');
+
+    if (stage?.status !== 'complete' || !backendProjectId) return;
+
+    // type: 'text' (not 'status') — 'status' messages render a hardcoded
+    // per-stage CyclingStatus component that ignores message.content
+    // entirely (confirmed: MessageRenderer's 'status' case), which would
+    // silently show fake cycling stage text instead of the assistant's
+    // real progress. 'text' renders message.content directly (DenarioBubble)
+    // and updates live as SSE events arrive.
+    const msgId = addMessage({ role: 'denario', type: 'text', content: 'Thinking…', stageId });
+    try {
+      await api.askAssistant(backendProjectId, trimmed);
+    } catch {
+      updateMessage(msgId, { content: "Sorry, I couldn't reach the backend just now." });
+      return;
+    }
+    // project-scoped, not filtered to this stage — the assistant can read
+    // any completed stage's content, matching 6.3's resolved design.
+    api.streamAssistant(
+      backendProjectId,
+      (event) => {
+        if (event.type === 'status') {
+          updateMessage(msgId, { content: event.text });
+        } else if (event.type === 'complete') {
+          updateMessage(msgId, {
+            content: event.partial ? `${event.answer}\n\n*(partial answer — I hit my search limit before fully exploring)*` : event.answer,
+          });
+        } else if (event.type === 'error') {
+          updateMessage(msgId, { content: `Sorry, something went wrong: ${event.error}` });
+        }
+      },
+      () => {},
+    );
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
