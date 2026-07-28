@@ -11,7 +11,7 @@ import { STAGE_ORDER, STAGE_CONFIG } from '../../config/stageConfig';
 import { ParamSelect, ParamToggle, ParamNumber } from '../../components/molecules/ParamControls/ParamControls';
 import { IdeaTranscriptCard } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
 import { MethodsLogCard } from '../../components/molecules/MethodsLog/MethodsLog';
-import type { Message, StageId, IdeaResultData, MethodsResultData } from '../../types/pipeline';
+import type { Message, StageId, IdeaResultData, MethodsResultData, Pipeline } from '../../types/pipeline';
 import styles from './StagePage.module.css';
 
 // ── Cycling status ─────────────────────────────────────────────────────────────
@@ -515,11 +515,14 @@ function ArrowUpIcon() {
 }
 
 // ── Compose bar popovers ("/" commands, "@" stage mentions) ────────────────────
-// Command list is placeholder scaffolding only — real capabilities aren't scoped
-// yet, see /Denario/COMPOSE_BAR_TICKETS.md (currently paused). The "@" stage list
-// is real, live pipeline data — that part isn't hypothetical.
-
-const SLASH_COMMANDS = ['Command 1', 'Command 2', 'Command 3', 'Command 4', 'Command 5', 'Command 6'];
+// ROADMAP.md ticket 6.10 — "/" is an explicit entry point into the same five
+// tools the freeform path already calls (list_stages/read_stage_summary/
+// read_stage_reasoning/propose_run/propose_edit), not a separate action
+// registry. Every item maps to a canonical phrase sent through the exact
+// same submit() → askAssistant/streamAssistant pipeline; there's no
+// slash-specific backend path. Run/re-run items auto-submit (nothing more
+// to type); the edit item pre-fills a phrase and waits for the researcher
+// to finish it (propose_edit needs an instruction, matching 6.5).
 
 interface PopoverItem {
   key: string;
@@ -527,6 +530,41 @@ interface PopoverItem {
   meta?: string;
   active?: boolean;
   disabled?: boolean;
+  phrase?: string;      // canonical text this item maps to, sent through the normal submit path
+  autoSubmit?: boolean; // true: submit immediately on selection; false: prefill and let the researcher keep typing
+}
+
+function buildSlashCommands(pipeline: Pipeline | null): PopoverItem[] {
+  if (!pipeline) return [];
+  const items: PopoverItem[] = [];
+  for (const sid of STAGE_ORDER) {
+    if (sid === 'input') continue;
+    const stage = pipeline.stages[sid];
+    // Locked/running stages aren't real propose_run targets right now — no
+    // point offering a command that would just confuse startStage's own
+    // guards, unlike the "@" list below, which intentionally shows every
+    // stage (including locked) for informational visibility.
+    if (!stage || stage.status === 'locked' || stage.status === 'running') continue;
+    const label = STAGE_CONFIG[sid].label;
+    const isRerun = stage.status === 'complete' || stage.status === 'error';
+    items.push({
+      key: `run-${sid}`,
+      label: isRerun ? `Re-run ${label}` : `Run ${label}`,
+      phrase: `${isRerun ? 'Re-run' : 'Run'} the ${label} stage.`,
+      autoSubmit: true,
+    });
+  }
+  // propose_edit is Methods-only for v1 (6.5) — only offer the shortcut
+  // when there's actually something to edit.
+  if (pipeline.stages.methods?.status === 'complete') {
+    items.push({
+      key: 'edit-methods',
+      label: 'Edit Methods',
+      phrase: 'Propose an edit to the Methods stage: ',
+      autoSubmit: false,
+    });
+  }
+  return items;
 }
 
 function ComposeBarPopover({
@@ -595,8 +633,7 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
   const query = trigger ? text.slice(1).toLowerCase() : '';
 
   const items: PopoverItem[] = trigger === '/'
-    ? SLASH_COMMANDS
-        .map((label, i) => ({ key: `cmd-${i}`, label }))
+    ? buildSlashCommands(pipeline)
         .filter(item => item.label.toLowerCase().includes(query))
     : trigger === '@'
     ? STAGE_ORDER
@@ -616,6 +653,16 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
 
   function selectItem(item: PopoverItem) {
     if (item.disabled) return;
+    if (trigger === '/' && item.phrase) {
+      setDismissed(true);
+      if (item.autoSubmit) {
+        submit(item.phrase);
+      } else {
+        setText(item.phrase);
+        requestAnimationFrame(() => inputRef.current?.focus());
+      }
+      return;
+    }
     setText(`${trigger}${item.label} `);
     setDismissed(true);
     requestAnimationFrame(() => inputRef.current?.focus());
@@ -627,8 +674,8 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
   // (stage not complete) is a different, unbuilt capability (feeding input
   // into an upcoming/current generation) — stays local-only for now, not
   // conflated with the assistant.
-  async function submit() {
-    const trimmed = text.trim();
+  async function submit(overrideText?: string) {
+    const trimmed = (overrideText ?? text).trim();
     if (!trimmed) return;
     addMessage({ role: 'user', type: 'text', content: trimmed, stageId });
     setText('');
@@ -708,7 +755,7 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
           placeholder={placeholder}
           onKeyDown={handleKeyDown}
         />
-        <button className={styles.sendBtn} onClick={submit} aria-label="Send">
+        <button className={styles.sendBtn} onClick={() => submit()} aria-label="Send">
           <ArrowUpIcon />
         </button>
       </div>
@@ -716,7 +763,7 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
       {trigger && !dismissed && anchorRect && (
         <ComposeBarPopover
           anchorRect={anchorRect}
-          header={trigger === '/' ? 'Insert artifact or tool' : 'Insert block reference'}
+          header={trigger === '/' ? 'Stage actions' : 'Insert block reference'}
           footer={trigger === '/' ? 'Use ↑↓ to navigate, ↵ to select' : 'Stages automatically lock as prerequisites'}
           items={items}
           highlightIndex={highlightIndex}
