@@ -48,7 +48,7 @@ export interface Message {
   // content (edit) mechanism only when the researcher confirms.
   proposedAction?:
     | { type: 'run'; stageId: StageId }
-    | { type: 'edit'; stageId: StageId; oldContent: string; newContent: string };
+    | { type: 'edit'; stageId: StageId; oldContent: string; newContent: string; newStructured: Record<string, unknown> | null };
 }
 
 // ── Stage result data (per-stage structured payload) ──────────────────────────

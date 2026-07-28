@@ -46,7 +46,7 @@ export type SseEvent =
 // for v1 (resolved design) — just one status notice, then complete/error.
 export type AssistantProposedAction =
   | { type: 'run'; stage_id: string }
-  | { type: 'edit'; stage_id: string; old_content: string; new_content: string };
+  | { type: 'edit'; stage_id: string; old_content: string; new_content: string; new_structured: Record<string, unknown> | null };
 
 export type AssistantSseEvent =
   | { type: 'status';   text: string }
@@ -163,13 +163,17 @@ export const api = {
   },
 
   approveStage(
-    projectId:     string,
-    stageId:       string,
-    editedContent?: string,
+    projectId:        string,
+    stageId:          string,
+    editedContent?:    string,
+    editedStructured?: Record<string, unknown>,
   ): Promise<{ message: string }> {
     return req(`/projects/${projectId}/stages/${stageId}/approve`, {
       method: 'POST',
-      body: JSON.stringify({ edited_content: editedContent ?? null }),
+      body: JSON.stringify({
+        edited_content:    editedContent    ?? null,
+        edited_structured: editedStructured ?? null,
+      }),
     });
   },
 

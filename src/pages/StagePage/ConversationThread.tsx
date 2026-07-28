@@ -243,7 +243,7 @@ function ProposedEditDiff({ oldContent, newContent }: { oldContent: string; newC
 // (already there, just never called from the frontend before this ticket),
 // then rehydrates the whole project so content and structured data stay
 // consistent together rather than patching just one field locally.
-function ProposedEditAction({ stageId, oldContent, newContent }: { stageId: StageId; oldContent: string; newContent: string }) {
+function ProposedEditAction({ stageId, oldContent, newContent, newStructured }: { stageId: StageId; oldContent: string; newContent: string; newStructured: Record<string, unknown> | null }) {
   const [resolved, setResolved] = useState<'confirmed' | 'dismissed' | null>(null);
   const [applying, setApplying] = useState(false);
   const backendProjectId = usePipelineStore(s => s.backendProjectId);
@@ -260,7 +260,12 @@ function ProposedEditAction({ stageId, oldContent, newContent }: { stageId: Stag
     if (!backendProjectId) return;
     setApplying(true);
     try {
-      await api.approveStage(backendProjectId, stageId, newContent);
+      // Both edited_content (the .md file) and edited_structured (the
+      // sidecar the UI actually renders from) must land together — passing
+      // only newContent left the file updated but the rendered card frozen
+      // on the old structured data, since parseMethods prefers `structured`
+      // over re-parsed markdown when present.
+      await api.approveStage(backendProjectId, stageId, newContent, newStructured ?? undefined);
       const fresh = await api.getProject(backendProjectId);
       hydratePipeline(fresh);
       setResolved('confirmed');
@@ -301,6 +306,7 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
           stageId={message.proposedAction.stageId}
           oldContent={message.proposedAction.oldContent}
           newContent={message.proposedAction.newContent}
+          newStructured={message.proposedAction.newStructured}
         />
       )}
       {children}
@@ -656,7 +662,7 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
             proposedAction: pa
               ? pa.type === 'run'
                 ? { type: 'run', stageId: pa.stage_id as StageId }
-                : { type: 'edit', stageId: pa.stage_id as StageId, oldContent: pa.old_content, newContent: pa.new_content }
+                : { type: 'edit', stageId: pa.stage_id as StageId, oldContent: pa.old_content, newContent: pa.new_content, newStructured: pa.new_structured }
               : undefined,
           });
         } else if (event.type === 'error') {
