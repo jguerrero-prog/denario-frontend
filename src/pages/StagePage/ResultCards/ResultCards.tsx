@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { usePipelineStore } from '../../../store/pipelineStore';
 import { startStage } from '../../../utils/stageRunner';
@@ -11,6 +11,7 @@ import { InlineMarkdown } from '../../../utils/MarkdownBlock';
 import { usePdfAvailability } from '../../../hooks/usePdfAvailability';
 import type {
   StageId,
+  Track,
   StageResult,
   IdeaResultData,
   IdeaSuggestion,
@@ -768,6 +769,22 @@ function ErrorCard({ stageId }: { stageId: StageId }) {
   );
 }
 
+// ROADMAP.md ticket 6.6 — a quiet, non-blocking notice that an upstream
+// stage has changed since this one was generated. Proposes a refresh only;
+// approving/reading the (possibly stale) result underneath is still allowed,
+// matching the app's "propose, never auto-run" pattern used elsewhere.
+function StaleBanner({ stageId, staleBecause, track }: { stageId: StageId; staleBecause: StageId[]; track?: Track }) {
+  const names = staleBecause.map(s => STAGE_CONFIG[s]?.label ?? s).join(', ');
+  return (
+    <div className={styles.staleBanner}>
+      <span>{names} changed since this was generated — it may no longer reflect the current inputs.</span>
+      <button className={styles.staleRefreshBtn} onClick={() => startStage(stageId, track ?? 'standard')}>
+        Refresh
+      </button>
+    </div>
+  );
+}
+
 export function StageResultCard({ stageId }: { stageId: StageId }) {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
@@ -796,15 +813,25 @@ export function StageResultCard({ stageId }: { stageId: StageId }) {
   }
 
   const props = { result, onApprove: handleApprove };
+  let card: ReactNode;
   switch (stageId) {
-    case 'input':      return <InputResultCard onApprove={handleApprove} />;
-    case 'idea':       return <IdeaResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'methods':    return <MethodsResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'analysis':   return <AnalysisResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'paper':      return <PaperResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'literature': return <LiteratureResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'referee':    return <RefereeResultCard {...props} onOpenFull={handleOpenFull} />;
-    case 'keywords':   return <KeywordsResultCard {...props} onOpenFull={handleOpenFull} />;
+    case 'input':      card = <InputResultCard onApprove={handleApprove} />; break;
+    case 'idea':       card = <IdeaResultCard {...props} onOpenFull={handleOpenFull} />; break;
+    case 'methods':    card = <MethodsResultCard {...props} onOpenFull={handleOpenFull} />; break;
+    case 'analysis':   card = <AnalysisResultCard {...props} onOpenFull={handleOpenFull} />; break;
+    case 'paper':      card = <PaperResultCard {...props} onOpenFull={handleOpenFull} />; break;
+    case 'literature': card = <LiteratureResultCard {...props} onOpenFull={handleOpenFull} />; break;
+    case 'referee':    card = <RefereeResultCard {...props} onOpenFull={handleOpenFull} />; break;
+    case 'keywords':   card = <KeywordsResultCard {...props} onOpenFull={handleOpenFull} />; break;
     default:           return null;
   }
+
+  return (
+    <>
+      {stage?.stale && stage.staleBecause && stage.staleBecause.length > 0 && (
+        <StaleBanner stageId={stageId} staleBecause={stage.staleBecause} track={stage.track} />
+      )}
+      {card}
+    </>
+  );
 }

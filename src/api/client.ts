@@ -19,6 +19,11 @@ export interface BackendStageResult {
   duration_sec: number | null;
   generated_at: number | null;
   error:        string | null;
+  // ROADMAP.md ticket 6.6 — true when an upstream stage's revision has moved
+  // past what this stage was actually generated against. Detection only —
+  // the UI proposes a refresh, it never auto-triggers one.
+  stale:         boolean;
+  stale_because: string[];
 }
 
 export interface BackendProject {

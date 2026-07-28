@@ -301,6 +301,11 @@ export interface Stage {
   params: Record<string, string | number | boolean>;  // stage-specific config
   result?: StageResult;
   error?: string;
+  // ROADMAP.md ticket 6.6 — set when an upstream stage has been edited/rerun
+  // since this stage was generated. staleBecause names which upstream
+  // stage(s). Detection only — surfaced as a nudge, never auto-refreshed.
+  stale?: boolean;
+  staleBecause?: StageId[];
 }
 
 // ── Pipeline ──────────────────────────────────────────────────────────────────

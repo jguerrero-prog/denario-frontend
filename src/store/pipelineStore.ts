@@ -222,6 +222,8 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
         status,
         ...(result ? { result } : {}),
         ...(status === 'error' ? { error: bs.error ?? 'An unexpected error occurred.' } : {}),
+        stale: bs.stale,
+        staleBecause: bs.stale_because as StageId[],
       };
     }
 
