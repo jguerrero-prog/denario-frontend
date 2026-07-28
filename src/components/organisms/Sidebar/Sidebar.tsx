@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { usePipelineStore } from '../../../store/pipelineStore';
 import { useBackendStatus } from '../../../hooks/useBackendStatus';
-import { ApiKeysModal } from '../../molecules/ApiKeysModal/ApiKeysModal';
+import { SettingsModal } from '../../molecules/SettingsModal/SettingsModal';
 import styles from './Sidebar.module.css';
 
 // ── Collapsed-rail hover tooltip (portalled — the sidebar clips overflow-x,
@@ -103,7 +103,7 @@ export function Sidebar({ projectName }: SidebarProps) {
   const pipeline = usePipelineStore(s => s.pipeline);
 
   const [collapsed, setCollapsed] = useState(false);
-  const [showApiKeys, setShowApiKeys] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [hoveredTooltip, setHoveredTooltip] = useState<{ label: string; rect: DOMRect } | null>(null);
 
   function showTooltip(e: React.MouseEvent<HTMLElement>, label: string) {
@@ -194,7 +194,7 @@ export function Sidebar({ projectName }: SidebarProps) {
         <div className={styles.settingsRow}>
           <button
             className={styles.settingsBtn}
-            onClick={() => setShowApiKeys(true)}
+            onClick={() => setShowSettings(true)}
             onMouseEnter={collapsed ? (e => showTooltip(e, 'Settings')) : undefined}
             onMouseLeave={collapsed ? hideTooltip : undefined}
           >
@@ -207,7 +207,7 @@ export function Sidebar({ projectName }: SidebarProps) {
     </div>
 
     {hoveredTooltip && <IconTooltip label={hoveredTooltip.label} anchorRect={hoveredTooltip.rect} />}
-    {showApiKeys && <ApiKeysModal onClose={() => setShowApiKeys(false)} />}
+    {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
     </>
   );
 }

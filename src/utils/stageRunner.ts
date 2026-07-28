@@ -1,5 +1,5 @@
 import { usePipelineStore } from '../store/pipelineStore';
-import { useConfigStore } from '../store/configStore';
+import { useConfigStore, type ModelOverrideStage } from '../store/configStore';
 import { api } from '../api/client';
 import { parseBackendResult, parseIdeaLog, parseMethodsPlanningLog, parseMethodsStepLog } from './parsers';
 import type {
@@ -89,6 +89,10 @@ export async function fetchMethodsLog(
     return METHODS_LOG_EMPTY;
   }
 }
+
+// Stages with a real per-agent model choice — see configStore's
+// ModelOverrideStage / ROADMAP.md ticket 1.6.
+const MODEL_OVERRIDE_STAGES: ModelOverrideStage[] = ['idea', 'methods', 'analysis', 'paper'];
 
 // ── Module-level run state ────────────────────────────────────────────────────
 
@@ -380,13 +384,16 @@ export async function startStage(stageId: StageId, track: Track) {
     // ── 3. Start the stage on the backend ───────────────────────────────────
     const backendTrack = track === 'standard' ? 'fast' : 'cmbagent';
     const apiKeys = useConfigStore.getState().getApiKeyPayload();
+    const modelOverrides = MODEL_OVERRIDE_STAGES.includes(stageId as ModelOverrideStage)
+      ? useConfigStore.getState().getModelOverridesPayload(stageId as ModelOverrideStage)
+      : {};
     const stageParams = usePipelineStore.getState().pipeline?.stages[stageId]?.params;
     const journal = stageParams?.journal as string | undefined;
     const addCitations = stageParams?.add_citations as boolean | undefined;
     const numKeywords = stageParams?.num_keywords as number | undefined;
     const kwType = stageParams?.kw_type as string | undefined;
     await api.runStage(backendId, stageId, {
-      track: backendTrack, journal, add_citations: addCitations,
+      track: backendTrack, model_overrides: modelOverrides, journal, add_citations: addCitations,
       n_keywords: numKeywords, kw_type: kwType,
       ...apiKeys,
     });

@@ -103,11 +103,16 @@ export const api = {
     if (!res.ok) throw new Error(`${res.status}`);
   },
 
+  listModels(): Promise<{ models: string[] }> {
+    return req('/models');
+  },
+
   runStage(
     projectId: string,
     stageId:   string,
     options: {
       track?:             'fast' | 'cmbagent';
+      model_overrides?:   Record<string, string>;
       journal?:           string;
       writer?:            string;
       add_citations?:     boolean;
@@ -118,16 +123,17 @@ export const api = {
       google_api_key?:    string;
     } = {},
   ): Promise<{ project_id: string; stage_id: string; status: StageStatus }> {
-    const { track, journal, writer, add_citations, n_keywords, kw_type, ...apiKeys } = options;
+    const { track, model_overrides, journal, writer, add_citations, n_keywords, kw_type, ...apiKeys } = options;
     return req(`/projects/${projectId}/stages/${stageId}/run`, {
       method: 'POST',
       body: JSON.stringify({
-        track:         track         ?? 'fast',
-        journal:       journal       ?? 'NONE',
-        writer:        writer        ?? 'scientist',
-        add_citations: add_citations ?? true,
-        n_keywords:    n_keywords    ?? 5,
-        kw_type:       kw_type       ?? 'unesco',
+        track:           track           ?? 'fast',
+        model_overrides: model_overrides ?? {},
+        journal:         journal         ?? 'NONE',
+        writer:          writer          ?? 'scientist',
+        add_citations:   add_citations   ?? true,
+        n_keywords:      n_keywords      ?? 5,
+        kw_type:         kw_type         ?? 'unesco',
         ...apiKeys,
       }),
     });
