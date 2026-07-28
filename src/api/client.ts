@@ -41,6 +41,14 @@ export type SseEvent =
   | { type: 'complete'; result: BackendStageResult }
   | { type: 'error';    error: string };
 
+// ROADMAP.md ticket 6.3/6.4 — the compose bar's own event shape, distinct
+// from SseEvent's stage-result shape. No live per-tool-call transparency
+// for v1 (resolved design) — just one status notice, then complete/error.
+export type AssistantSseEvent =
+  | { type: 'status';   text: string }
+  | { type: 'complete'; answer: string; partial: boolean }
+  | { type: 'error';    error: string };
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -238,6 +246,48 @@ export const api = {
     };
 
     // Return a cleanup function the caller can use to close early
+    return () => es.close();
+  },
+
+  // ── Compose bar (ROADMAP.md 6.3/6.4) ────────────────────────────────────────
+  // Two-step, same shape as runStage/streamStage: askAssistant starts the
+  // question and returns immediately; streamAssistant consumes the SSE
+  // reply. Not yet wired into a UI component — the compose bar's input is
+  // still deliberately static scaffolding pending its own scoping decision.
+
+  askAssistant(projectId: string, question: string): Promise<{ status: string }> {
+    return req(`/projects/${projectId}/assistant/ask`, {
+      method: 'POST',
+      body: JSON.stringify({ question }),
+    });
+  },
+
+  streamAssistant(
+    projectId: string,
+    onEvent:   (event: AssistantSseEvent) => void,
+    onDone:    () => void,
+  ): () => void {
+    const es = new EventSource(`${V1}/projects/${projectId}/assistant/stream`);
+
+    es.onmessage = (e) => {
+      try {
+        const event = JSON.parse(e.data) as AssistantSseEvent;
+        onEvent(event);
+        if (event.type === 'complete' || event.type === 'error') {
+          es.close();
+          onDone();
+        }
+      } catch {
+        // malformed event — ignore
+      }
+    };
+
+    es.onerror = () => {
+      onEvent({ type: 'error', error: 'Connection to server lost.' });
+      es.close();
+      onDone();
+    };
+
     return () => es.close();
   },
 };
