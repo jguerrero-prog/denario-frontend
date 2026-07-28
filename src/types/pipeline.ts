@@ -42,6 +42,10 @@ export interface Message {
   track?: Track;        // set on result-card messages
   actionLabel?: string; // action button label — used by 'suggestion-followup'
   timestamp: number;
+  // ROADMAP.md ticket 6.7 — set when the assistant proposed running a
+  // stage. Never auto-triggered; DenarioBubble renders a confirm button
+  // that calls the existing startStage() only when clicked.
+  proposedAction?: { type: 'run'; stageId: StageId };
 }
 
 // ── Stage result data (per-stage structured payload) ──────────────────────────

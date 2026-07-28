@@ -46,7 +46,7 @@ export type SseEvent =
 // for v1 (resolved design) — just one status notice, then complete/error.
 export type AssistantSseEvent =
   | { type: 'status';   text: string }
-  | { type: 'complete'; answer: string; partial: boolean }
+  | { type: 'complete'; answer: string; partial: boolean; proposed_action: { type: 'run'; stage_id: string } | null }
   | { type: 'error';    error: string };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────

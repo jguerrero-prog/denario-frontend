@@ -188,6 +188,31 @@ function DenarioRing() {
   );
 }
 
+// ROADMAP.md ticket 6.7 — proposes, never auto-runs. Confirm calls the
+// exact same startStage() every other run action in the app uses.
+function ProposedRunAction({ stageId }: { stageId: StageId }) {
+  const [resolved, setResolved] = useState<'confirmed' | 'dismissed' | null>(null);
+  if (resolved === 'confirmed') {
+    return <p className={styles.proposedActionResolved}>Started {STAGE_CONFIG[stageId].label}.</p>;
+  }
+  if (resolved === 'dismissed') {
+    return <p className={styles.proposedActionResolved}>Dismissed.</p>;
+  }
+  return (
+    <div className={styles.proposedActionRow}>
+      <button
+        className={styles.proposedActionConfirmBtn}
+        onClick={() => { startStage(stageId, 'standard'); setResolved('confirmed'); }}
+      >
+        Run {STAGE_CONFIG[stageId].label}
+      </button>
+      <button className={styles.proposedActionDismissBtn} onClick={() => setResolved('dismissed')}>
+        Dismiss
+      </button>
+    </div>
+  );
+}
+
 function DenarioBubble({ message, children }: { message: Message; children?: React.ReactNode }) {
   const timeLabel = formatTime(message.timestamp);
   return (
@@ -199,6 +224,7 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
         <span className={styles.aiTimestamp}>{timeLabel}</span>
       </div>
       {message.content && <p className={styles.aiText}>{message.content}</p>}
+      {message.proposedAction?.type === 'run' && <ProposedRunAction stageId={message.proposedAction.stageId} />}
       {children}
     </div>
   );
@@ -548,6 +574,9 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
         } else if (event.type === 'complete') {
           updateMessage(msgId, {
             content: event.partial ? `${event.answer}\n\n*(partial answer — I hit my search limit before fully exploring)*` : event.answer,
+            proposedAction: event.proposed_action
+              ? { type: 'run', stageId: event.proposed_action.stage_id as StageId }
+              : undefined,
           });
         } else if (event.type === 'error') {
           updateMessage(msgId, { content: `Sorry, something went wrong: ${event.error}` });
