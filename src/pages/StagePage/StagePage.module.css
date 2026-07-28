@@ -364,6 +364,29 @@
   font-style: italic;
 }
 
+/* ── Proposed edit diff preview (ticket 6.5) ── */
+
+.proposedEditPreview {
+  margin-top: var(--space-2);
+}
+
+.proposedEditDiff {
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  max-height: 320px;
+}
+
+.proposedEditDiff :global(.cm-mergeView) {
+  height: 100%;
+}
+
+.proposedEditDiff :global(.cm-scroller) {
+  max-height: 320px;
+}
+
 /* ── User reply bubble ── */
 
 .userReply {

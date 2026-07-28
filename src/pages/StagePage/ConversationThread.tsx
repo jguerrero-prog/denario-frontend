@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
+import { EditorView } from 'codemirror';
+import { MergeView } from '@codemirror/merge';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { startStage, stopStage } from '../../utils/stageRunner';
 import { api } from '../../api/client';
@@ -213,6 +215,75 @@ function ProposedRunAction({ stageId }: { stageId: StageId }) {
   );
 }
 
+// Read-only side-by-side diff, per ROADMAP.md 3.4/6.5's already-decided
+// choice of @codemirror/merge's MergeView (kept consistent with the Paper
+// editor's planned diff UI, rather than inventing a second diff component).
+function ProposedEditDiff({ oldContent, newContent }: { oldContent: string; newContent: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const readOnlyWrap = [EditorView.editable.of(false), EditorView.lineWrapping];
+    const view = new MergeView({
+      a: { doc: oldContent, extensions: readOnlyWrap },
+      b: { doc: newContent, extensions: readOnlyWrap },
+      parent: containerRef.current,
+    });
+    return () => view.destroy();
+    // Mount once per proposal — a new message id means a fresh diff, never
+    // re-synced into an already-mounted view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <div ref={containerRef} className={styles.proposedEditDiff} />;
+}
+
+// ROADMAP.md ticket 6.5 — proposes, never writes anything itself. Confirm
+// persists via the existing approveStage-with-edited-content backend route
+// (already there, just never called from the frontend before this ticket),
+// then rehydrates the whole project so content and structured data stay
+// consistent together rather than patching just one field locally.
+function ProposedEditAction({ stageId, oldContent, newContent }: { stageId: StageId; oldContent: string; newContent: string }) {
+  const [resolved, setResolved] = useState<'confirmed' | 'dismissed' | null>(null);
+  const [applying, setApplying] = useState(false);
+  const backendProjectId = usePipelineStore(s => s.backendProjectId);
+  const hydratePipeline = usePipelineStore(s => s.hydratePipeline);
+
+  if (resolved === 'confirmed') {
+    return <p className={styles.proposedActionResolved}>Applied the edit to {STAGE_CONFIG[stageId].label}.</p>;
+  }
+  if (resolved === 'dismissed') {
+    return <p className={styles.proposedActionResolved}>Dismissed.</p>;
+  }
+
+  async function handleConfirm() {
+    if (!backendProjectId) return;
+    setApplying(true);
+    try {
+      await api.approveStage(backendProjectId, stageId, newContent);
+      const fresh = await api.getProject(backendProjectId);
+      hydratePipeline(fresh);
+      setResolved('confirmed');
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  return (
+    <div className={styles.proposedEditPreview}>
+      <ProposedEditDiff oldContent={oldContent} newContent={newContent} />
+      <div className={styles.proposedActionRow}>
+        <button className={styles.proposedActionConfirmBtn} onClick={handleConfirm} disabled={applying}>
+          {applying ? 'Applying…' : `Apply edit to ${STAGE_CONFIG[stageId].label}`}
+        </button>
+        <button className={styles.proposedActionDismissBtn} onClick={() => setResolved('dismissed')} disabled={applying}>
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DenarioBubble({ message, children }: { message: Message; children?: React.ReactNode }) {
   const timeLabel = formatTime(message.timestamp);
   return (
@@ -225,6 +296,13 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
       </div>
       {message.content && <p className={styles.aiText}>{message.content}</p>}
       {message.proposedAction?.type === 'run' && <ProposedRunAction stageId={message.proposedAction.stageId} />}
+      {message.proposedAction?.type === 'edit' && (
+        <ProposedEditAction
+          stageId={message.proposedAction.stageId}
+          oldContent={message.proposedAction.oldContent}
+          newContent={message.proposedAction.newContent}
+        />
+      )}
       {children}
     </div>
   );
@@ -572,10 +650,13 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
         if (event.type === 'status') {
           updateMessage(msgId, { content: event.text });
         } else if (event.type === 'complete') {
+          const pa = event.proposed_action;
           updateMessage(msgId, {
             content: event.partial ? `${event.answer}\n\n*(partial answer — I hit my search limit before fully exploring)*` : event.answer,
-            proposedAction: event.proposed_action
-              ? { type: 'run', stageId: event.proposed_action.stage_id as StageId }
+            proposedAction: pa
+              ? pa.type === 'run'
+                ? { type: 'run', stageId: pa.stage_id as StageId }
+                : { type: 'edit', stageId: pa.stage_id as StageId, oldContent: pa.old_content, newContent: pa.new_content }
               : undefined,
           });
         } else if (event.type === 'error') {

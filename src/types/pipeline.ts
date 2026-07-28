@@ -42,10 +42,13 @@ export interface Message {
   track?: Track;        // set on result-card messages
   actionLabel?: string; // action button label — used by 'suggestion-followup'
   timestamp: number;
-  // ROADMAP.md ticket 6.7 — set when the assistant proposed running a
-  // stage. Never auto-triggered; DenarioBubble renders a confirm button
-  // that calls the existing startStage() only when clicked.
-  proposedAction?: { type: 'run'; stageId: StageId };
+  // ROADMAP.md tickets 6.5/6.7 — set when the assistant proposed an action.
+  // Never auto-triggered; DenarioBubble renders a confirm/dismiss pair that
+  // calls the existing startStage() (run) or approveStage-with-edited-
+  // content (edit) mechanism only when the researcher confirms.
+  proposedAction?:
+    | { type: 'run'; stageId: StageId }
+    | { type: 'edit'; stageId: StageId; oldContent: string; newContent: string };
 }
 
 // ── Stage result data (per-stage structured payload) ──────────────────────────

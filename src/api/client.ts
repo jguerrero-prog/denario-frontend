@@ -44,9 +44,13 @@ export type SseEvent =
 // ROADMAP.md ticket 6.3/6.4 — the compose bar's own event shape, distinct
 // from SseEvent's stage-result shape. No live per-tool-call transparency
 // for v1 (resolved design) — just one status notice, then complete/error.
+export type AssistantProposedAction =
+  | { type: 'run'; stage_id: string }
+  | { type: 'edit'; stage_id: string; old_content: string; new_content: string };
+
 export type AssistantSseEvent =
   | { type: 'status';   text: string }
-  | { type: 'complete'; answer: string; partial: boolean; proposed_action: { type: 'run'; stage_id: string } | null }
+  | { type: 'complete'; answer: string; partial: boolean; proposed_action: AssistantProposedAction | null }
   | { type: 'error';    error: string };
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
