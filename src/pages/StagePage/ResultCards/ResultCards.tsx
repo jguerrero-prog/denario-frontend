@@ -697,6 +697,10 @@ function ErrorCard({ stageId }: { stageId: StageId }) {
     startStage(stageId, track);
   }
 
+  function handleStartFresh() {
+    startStage(stageId, track, { forceRestart: true });
+  }
+
   return (
     <div className={styles.errorCard}>
       <div className={styles.errorHeader}>
@@ -744,10 +748,22 @@ function ErrorCard({ stageId }: { stageId: StageId }) {
           />
         </div>
       )}
-      <button className={styles.retryBtn} onClick={handleRetry}>
-        <RefreshIcon />
-        Retry
-      </button>
+      <div className={styles.errorActionsRow}>
+        <button className={styles.retryBtn} onClick={handleRetry}>
+          <RefreshIcon />
+          Retry
+        </button>
+        {/* Analysis-only: a plain Retry silently resumes from the last
+            cmbagent checkpoint (see _detect_analysis_resume_step on the
+            backend) — right after a transient failure, wrong if the user
+            edited Methods and actually wants a clean re-run. No equivalent
+            checkpoint-resume behavior exists for other stages. */}
+        {stageId === 'analysis' && (
+          <button className={styles.ghostBtn} onClick={handleStartFresh}>
+            Start fresh
+          </button>
+        )}
+      </div>
     </div>
   );
 }

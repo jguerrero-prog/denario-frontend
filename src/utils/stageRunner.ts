@@ -345,7 +345,7 @@ function hasLogCard(stageId: StageId, track: Track): boolean {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
-export async function startStage(stageId: StageId, track: Track) {
+export async function startStage(stageId: StageId, track: Track, opts: { forceRestart?: boolean } = {}) {
   _cancelAll(stageId);
 
   const store = usePipelineStore.getState();
@@ -393,7 +393,8 @@ export async function startStage(stageId: StageId, track: Track) {
     const numKeywords = stageParams?.num_keywords as number | undefined;
     const kwType = stageParams?.kw_type as string | undefined;
     await api.runStage(backendId, stageId, {
-      track: backendTrack, model_overrides: modelOverrides, journal, add_citations: addCitations,
+      track: backendTrack, model_overrides: modelOverrides, force_restart: opts.forceRestart,
+      journal, add_citations: addCitations,
       n_keywords: numKeywords, kw_type: kwType,
       ...apiKeys,
     });

@@ -113,6 +113,7 @@ export const api = {
     options: {
       track?:             'fast' | 'cmbagent';
       model_overrides?:   Record<string, string>;
+      force_restart?:     boolean;
       journal?:           string;
       writer?:            string;
       add_citations?:     boolean;
@@ -123,12 +124,13 @@ export const api = {
       google_api_key?:    string;
     } = {},
   ): Promise<{ project_id: string; stage_id: string; status: StageStatus }> {
-    const { track, model_overrides, journal, writer, add_citations, n_keywords, kw_type, ...apiKeys } = options;
+    const { track, model_overrides, force_restart, journal, writer, add_citations, n_keywords, kw_type, ...apiKeys } = options;
     return req(`/projects/${projectId}/stages/${stageId}/run`, {
       method: 'POST',
       body: JSON.stringify({
         track:           track           ?? 'fast',
         model_overrides: model_overrides ?? {},
+        force_restart:   force_restart   ?? false,
         journal:         journal         ?? 'NONE',
         writer:          writer          ?? 'scientist',
         add_citations:   add_citations   ?? true,
