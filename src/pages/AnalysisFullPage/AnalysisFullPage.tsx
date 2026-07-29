@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { PlotLightbox } from '../../components/PlotLightbox/PlotLightbox';
+import { DataTableViewer } from '../../components/DataTableViewer/DataTableViewer';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import { InlineMarkdown } from '../../utils/MarkdownBlock';
@@ -148,6 +149,9 @@ export function AnalysisFullPage() {
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState(0);
+  // ROADMAP.md ticket 4.4 — browsable CSV table viewer, same open/close
+  // shape as the plot lightbox above (one at a time, by filename).
+  const [openDataFile, setOpenDataFile] = useState<string | null>(null);
 
   const plots = data?.plots ?? [];
   const visiblePlots = plots.slice(0, 3);
@@ -307,6 +311,29 @@ export function AnalysisFullPage() {
               </div>
             )}
 
+            {/* Data Files — ROADMAP.md ticket 4.4. Real CSVs promoted by
+                4.1 (fetchAnalysisDataFiles — a real file listing, not
+                parsed from results.md prose), each opening a sortable/
+                filterable table instead of a plain download. */}
+            {data?.dataFiles && data.dataFiles.length > 0 && (
+              <div className={styles.section}>
+                <p className={styles.sectionLabel}>Data Files</p>
+                <div className={styles.fileList}>
+                  {data.dataFiles.map(name => (
+                    <div key={name} className={styles.fileRow}>
+                      <div className={styles.fileRowLeft}>
+                        <span className={styles.fileIconWrap}><FileIcon /></span>
+                        <span className={styles.fileName}>{name}</span>
+                      </div>
+                      <button className={styles.downloadLink} onClick={() => setOpenDataFile(name)}>
+                        View
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* End footer */}
             <div className={styles.endFooter}>
               <div className={styles.divider} />
@@ -325,6 +352,14 @@ export function AnalysisFullPage() {
           onNavigate={setLightboxIdx}
           backendProjectId={backendProjectId}
           captions={data?.plotCaptions}
+        />
+      )}
+
+      {openDataFile && backendProjectId && (
+        <DataTableViewer
+          fileName={openDataFile}
+          backendProjectId={backendProjectId}
+          onClose={() => setOpenDataFile(null)}
         />
       )}
     </div>

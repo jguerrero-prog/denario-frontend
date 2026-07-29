@@ -199,6 +199,11 @@ export interface AnalysisResultData {
   };
   generatedFiles: Array<{ name: string; size: string; type: 'py' | 'md' | 'dir' }>;
   structured?: StructuredResults | null;
+  // ROADMAP.md ticket 4.4 — real CSVs promoted by 4.1 to
+  // input_files/analysis_data/, fetched via a real file listing (not
+  // parsed from results.md prose, unlike `plots` above) — see
+  // fetchAnalysisDataFiles in utils/stageRunner.ts. Bare filenames.
+  dataFiles?: string[];
 }
 
 export interface PaperResultData {

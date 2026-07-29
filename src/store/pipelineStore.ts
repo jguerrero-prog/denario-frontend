@@ -1,10 +1,10 @@
 import { create } from 'zustand';
-import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound, MethodsResultData, MethodsPlanningTurn, MethodsExecutionStep, LiteratureResultData, SearchedPaper } from '../types/pipeline';
+import type { Pipeline, Stage, StageId, StageStatus, StageResult, ModelConfig, Message, Track, InputFile, IdeaResultData, IdeaTranscriptRound, MethodsResultData, MethodsPlanningTurn, MethodsExecutionStep, LiteratureResultData, SearchedPaper, AnalysisResultData } from '../types/pipeline';
 import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
 import { parseBackendResult } from '../utils/parsers';
-import { buildMockResult, fetchIdeaTranscript, fetchIdeaLog, fetchMethodsLog, fetchSearchedPapers } from '../utils/stageRunner';
+import { buildMockResult, fetchIdeaTranscript, fetchIdeaLog, fetchMethodsLog, fetchSearchedPapers, fetchAnalysisDataFiles } from '../utils/stageRunner';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
@@ -28,6 +28,7 @@ interface PipelineStore {
   setIdeaTranscript: (transcript: IdeaTranscriptRound[]) => void;
   setIdeaLog: (planningLog: MethodsPlanningTurn[], executionLog: MethodsExecutionStep[]) => void;
   setMethodsLog: (planningLog: MethodsPlanningTurn[], executionLog: MethodsExecutionStep[]) => void;
+  setAnalysisDataFiles: (dataFiles: string[]) => void;
   setLiteratureSearchedPapers: (papers: SearchedPaper[]) => void;
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
   unlockNextStage: (stageId: StageId) => void;  // like approveStage, but adds no conversation messages
@@ -318,6 +319,12 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       });
     }
 
+    if (updatedStages.analysis.status === 'complete' && updatedStages.analysis.result) {
+      fetchAnalysisDataFiles(id).then(dataFiles => {
+        if (dataFiles.length > 0) get().setAnalysisDataFiles(dataFiles);
+      });
+    }
+
     if (updatedStages.literature.status === 'complete' && updatedStages.literature.result) {
       fetchSearchedPapers(id).then(papers => {
         if (papers.length > 0) get().setLiteratureSearchedPapers(papers);
@@ -414,6 +421,21 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       return {
         pipeline: updateStage(pipeline, 'methods', {
           result: { ...stage.result, stageData: { ...stageData, planningLog, executionLog } },
+        }),
+      };
+    }),
+
+  // ROADMAP.md ticket 4.4 — same arrives-after-the-result-itself reasoning
+  // as setIdeaTranscript/setMethodsLog, but sourced from a real file listing
+  // (fetchAnalysisDataFiles) rather than a specific sidecar file.
+  setAnalysisDataFiles: (dataFiles) =>
+    set(({ pipeline }) => {
+      const stage = pipeline?.stages.analysis;
+      if (!pipeline || !stage?.result) return {};
+      const stageData = stage.result.stageData as AnalysisResultData;
+      return {
+        pipeline: updateStage(pipeline, 'analysis', {
+          result: { ...stage.result, stageData: { ...stageData, dataFiles } },
         }),
       };
     }),

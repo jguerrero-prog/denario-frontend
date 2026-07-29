@@ -255,6 +255,16 @@ export const api = {
     return cacheBust ? `${base}?t=${cacheBust}` : base;
   },
 
+  // ROADMAP.md ticket 4.4 — lists every file in the project directory
+  // (recursive), used to discover the real CSVs ticket 4.1 promoted to
+  // input_files/analysis_data/ rather than relying on results.md's prose
+  // happening to name them (the approach `plots` already uses — CSVs get
+  // the more accurate treatment since 4.1 makes the real promoted set
+  // directly knowable).
+  listFiles(projectId: string): Promise<{ files: { path: string; size: number; suffix: string }[] }> {
+    return req(`/projects/${projectId}/files`);
+  },
+
   // ── SSE stream ───────────────────────────────────────────────────────────────
 
   streamStage(

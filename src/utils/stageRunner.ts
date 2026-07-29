@@ -139,6 +139,23 @@ export async function fetchIdeaLog(
   }
 }
 
+// ROADMAP.md ticket 4.4 — real CSVs promoted by 4.1's plot->script ledger
+// to input_files/analysis_data/. Uses the real file listing rather than
+// `plots`' approach (regex-matching filenames mentioned in results.md's
+// prose) — the report text might not name every promoted CSV, and 4.1
+// makes the actual promoted set directly knowable instead of guessed.
+export async function fetchAnalysisDataFiles(backendId: string): Promise<string[]> {
+  try {
+    const res = await api.listFiles(backendId);
+    const prefix = 'input_files/analysis_data/';
+    return res.files
+      .filter(f => f.path.startsWith(prefix) && f.suffix.toLowerCase() === '.csv')
+      .map(f => f.path.slice(prefix.length));
+  } catch {
+    return [];
+  }
+}
+
 // Stages with a real per-agent model choice — see configStore's
 // ModelOverrideStage / ROADMAP.md ticket 1.6.
 const MODEL_OVERRIDE_STAGES: ModelOverrideStage[] = ['idea', 'methods', 'analysis', 'paper'];
@@ -559,6 +576,15 @@ function _onStageComplete(
         if (planningLog.length > 0 || executionLog.length > 0) {
           usePipelineStore.getState().setMethodsLog(planningLog, executionLog);
         }
+      });
+    }
+  }
+
+  if (stageId === 'analysis') {
+    const backendId = usePipelineStore.getState().backendProjectId;
+    if (backendId) {
+      fetchAnalysisDataFiles(backendId).then(dataFiles => {
+        if (dataFiles.length > 0) usePipelineStore.getState().setAnalysisDataFiles(dataFiles);
       });
     }
   }
