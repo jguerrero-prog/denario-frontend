@@ -27,46 +27,25 @@ One consolidated, prioritized view of everything scoped across the planning docs
 
 ---
 
-## Recommended build sequence
+## What's actually left (last audited 2026-07-28)
 
-Ordered by impact, effort, and what unblocks what — not strict, but the sensible path.
+Epic 1's Phase 0 quick wins (1.1/1.2/1.3/1.4) and all of Epic 6 (6.2–6.10)
+turned out to already be implemented/shipped by the time this was
+re-audited — this table replaces the older, now-stale "Recommended build
+sequence" phasing, which still listed them as pending.
 
-### Phase 0 — Quick wins & honesty fixes
-*Tiny effort, no blockers, no design. Fixes things that are currently blank, broken, or fabricated — highest trust-per-hour.*
-
-| Ticket | SP |
-|--------|----|
-| 1.1 Show the real manuscript title | 1 |
-| 1.2 Stop PASJ dropping keywords | 1 |
-| 1.3 Render bullet lists in Referee/Literature bodies | 2 |
-| 1.4 Replace fabricated plot captions | 2 |
-| 1.6 Honor the `model_overrides` field | 2 |
-
-### Phase 1 — Foundations
-*Unblock the bigger features downstream. 4.1 needs its hard-pivot decision made first.*
-
-| Ticket | SP | Unblocks |
-|--------|----|----------|
-| 2.1 Harden & generalize the reasoning-log renderer | 3 | 2.2 |
-| 4.1 Preserve scripts/data + plot→script map | 5 | 4.2, 4.3, 4.4 |
-
-### Phase 2 — Ready features
-*High-value build-out that's unblocked once Phase 0–1 land.*
-
-| Ticket | SP |
-|--------|----|
-| 2.2 Idea adversarial log (Rigorous track) | 3 |
-| 4.2 → 4.3 Interactive plots (backend render → popup) | 8 / 8 |
-| 4.4 Browsable data tables | 3 |
-
-### Phase 3 — Structural / decision-gated
-*Each needs a decision or an unpause before it starts.*
-
-| Ticket | SP | Gate |
+| Ticket | SP | Status/gate |
 |--------|----|------|
-| 5.3 Move Literature Review earlier | 3 | Hard pivot (pipeline gating) |
-| Epic 6 (whole) Research Assistant | ~37 | Paused on problem statement |
-| 3.4 Chat-driven LaTeX edits | 5 | Needs 6.3 to exist first |
+| 2.1 Harden & generalize the reasoning-log renderer | 3 | Ready, no blockers — foundational, unblocks 2.2 |
+| 2.2 Idea adversarial log (Rigorous track) | 3 | Ready (once 2.1 lands), but blocked on running a real Rigorous-track Idea generation to verify file paths against |
+| 3.4 Chat-driven full-document edits | 5 | Was gated on 6.3 existing — 6.3 has since shipped; re-check whether this is actually unblocked now |
+| 4.1 Preserve scripts/data + plot→script map | 5 (needs re-estimate) | Paused — hard pivot decided (live run-ledger), deliberately not started; foundational, blocks 4.2/4.3/4.4 |
+| 4.2 Interactive companion render (backend) | 8 | Blocked on 4.1 |
+| 4.3 "Interact with it" popup: live controls + 3D | 8 | Blocked on 4.1/4.2 |
+| 4.4 Browsable data tables from the run's CSVs | 3 | Blocked on 4.1 — low priority |
+| 4.5 Standalone "Lab" workspace | needs estimate | Ready — placeholder already shipped |
+| 5.2 "Related Literature" trail | 3 | Mostly shipped — round-by-round search trail explicitly deferred/optional |
+| 5.3 Move Literature Review earlier (stage 6 → 3) | 3 | Ready mechanically, gated on a hard-pivot decision (reorders every stage's lock/unlock logic) |
 
 ---
 
@@ -74,7 +53,7 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 *Fix what's broken, blank, or fabricated before building on top of it.*
 
 ### 1.1 Show the real manuscript title
-- **Status:** Ready · **SP:** 1 · **Needs design:** No · **Hard pivot:** —
+- **Status:** **Shipped** (found already implemented on re-audit, 2026-07-28 — `extractLatexTitle` exists in `src/utils/parsers.ts` and is wired into `parsePaper`, handling nested braces/short-title args/`\\` breaks per its own docstring) · **SP:** 1 · **Needs design:** No · **Hard pivot:** —
 - **Description:** The Paper stage's title always renders blank. `extractTitle()` only matches a markdown `#` heading, but the real backend output is LaTeX, which declares its title via `\title{}`.
 - **Dependencies:** none
 - **User impact:** The manuscript card and full-page header show the real paper title instead of nothing.
@@ -83,7 +62,7 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** Match `\title{...}` directly and strip nested LaTeX commands; keep the markdown fallback for safety.
 
 ### 1.2 Stop PASJ from silently dropping keywords
-- **Status:** Ready · **SP:** 1 · **Needs design:** No · **Hard pivot:** —
+- **Status:** **Shipped** (found already implemented on re-audit, 2026-07-28 — `latex_pasj` in `denario/paper_agents/latex_presets.py` already has `keywords=lambda x: f"\\keywords{{{x}}}"`) · **SP:** 1 · **Needs design:** No · **Hard pivot:** —
 - **Description:** The PASJ journal preset never wires up a `keywords` handler, so generated keywords are silently discarded — even though PASJ genuinely requires keywords and uses the same AASTeX macros as AAS (which does wire it up).
 - **Dependencies:** none
 - **User impact:** PASJ manuscripts include their keywords instead of dropping them silently.
@@ -93,7 +72,7 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Note:** need to test with PASJ journal style.
 
 ### 1.3 Render bullet lists in Referee/Literature bodies
-- **Status:** Ready · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
+- **Status:** **Shipped** (found already implemented on re-audit, 2026-07-28 — `MarkdownBlock.tsx`'s `splitBlocks` already detects `^\s*[*-]\s+` lines and renders real `<ul>/<li>`, used by both `RefereeFullPage` and `LiteratureFullPage`) · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
 - **Description:** `InlineMarkdown` only handles bold/code, so `* item` sub-bullets in real Referee/Literature text render as literal asterisks.
 - **Dependencies:** none
 - **User impact:** Peer-review points and literature comparisons read as proper lists, not raw markup.
@@ -102,7 +81,7 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
 - **Claude suggestion:** Add one block-level pattern for `* `/`- ` lines → `<ul>/<li>`; stay lightweight, no markdown library (matches the app's existing convention).
 
 ### 1.4 Replace fabricated plot captions with real ones
-- **Status:** Ready · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
+- **Status:** **Shipped** (found already implemented on re-audit, 2026-07-28 — `PlotLightbox` takes a real `captions: Record<string, string>` prop with an honest `Figure N.` fallback when no real caption exists; no fabricated statistics dictionary present) · **SP:** 2 · **Needs design:** No · **Hard pivot:** —
 - **Description:** `PlotLightbox` has a hardcoded caption dictionary with invented statistics ("Pearson r = 0.847…") keyed to mock filenames that never match real plots, plus two hand-drawn mock SVG charts left over from pre-real-data scaffolding.
 - **Dependencies:** none
 - **User impact:** Plot captions show real, non-fabricated text; removes invented numbers that could mislead a researcher.
@@ -325,7 +304,7 @@ Ordered by impact, effort, and what unblocks what — not strict, but the sensib
   - **Explicitly throwaway, not production code — flagged so it doesn't quietly survive:** lived in the session scratchpad, not this repo, specifically so it can't be committed and mistaken for real wiring. When 6.2/6.3 actually get built, treat this as disposable reference only — rewrite cleanly against the real tool surface, don't extend this script in place.
 
 - **Found during 6.3a's spike (2026-07-28): a real risk to already-shipped features, tracked separately — see Epic 1 ticket 1.7.**
-- **6.3 Classification endpoint (core LangGraph node)** — **v1 code shipped (2026-07-28), but not safe to actually use yet — see the real-model finding below.** SP8. The single entry point every message goes through — a **tool-calling node with 6.2's read-tools bound to it** (agentic retrieval: the node decides what to read per question, not a pre-assembled context blob), answer-only (no `propose_edit`/`propose_run` — those route through 6.5/6.7, which don't exist). Files: `denario/langgraph_agents/assistant.py` (new), `api/routes/assistant.py` (new, `POST /projects/{id}/assistant/ask`), `api/main.py` (router registration).
+- **6.3 Classification endpoint (core LangGraph node)** — **Shipped (2026-07-28) and now actually safe to use** — the "not safe to use yet" caveat below (real multi-turn Gemini tool-calling breaking on this machine's `Denario_env`) was resolved the same day by ticket 1.7's `gemini-2.5-flash` stopgap, which fixed the exact `thought_signature` bug described. Left the original finding below intact as the historical record of what broke and why. SP8. The single entry point every message goes through — a **tool-calling node with 6.2's read-tools bound to it** (agentic retrieval: the node decides what to read per question, not a pre-assembled context blob), answer-only (no `propose_edit`/`propose_run` — those route through 6.5/6.7, which don't exist). Files: `denario/langgraph_agents/assistant.py` (new), `api/routes/assistant.py` (new, `POST /projects/{id}/assistant/ask`), `api/main.py` (router registration).
   - **What shipped:** `_build_llm` (mirrors `manuscript_edit.py`'s model-construction branch — the only other place this mapping exists), `_build_tools` (wraps 6.2's three methods as `StructuredTool`s, `project_id` bound via closure over the `ProjectRunner`, never an LLM-supplied argument), a drafted system prompt (grounding rules, the "no web search, infer-and-label" fallback from 6.2, explicit "I can't edit/run" boundary for v1), the turn-budget cap (`RECURSION_LIMIT = 2×15+5`, per 6.3a's `remaining_steps` finding — generous, not tuned tight), a custom cap-hit handler (`GraphRecursionError` caught around `agent.stream(...)`, building a best-effort answer from whatever `ToolMessage`s made it into history — not LangGraph's generic canned message), and the same-turn tool-call dedup cache from the turn-budget-cap design.
   - **Verified with mocked models** (`GenericFakeChatModel` + the `bind_tools`-override subclass from 6.3a), against the real project on disk, covering all 6 of item 7's scenarios: zero tool calls, one tool call, multiple sequential tool calls, a genuinely-absent log (`read_stage_reasoning('paper')` correctly returns "no reasoning-log concept"), the turn-budget cap actually hitting (confirmed a real infinite-tool-call loop produces the labeled-partial answer, not a crash or the generic message), and a model-construction failure. Also verified through the real HTTP route (`TestClient`, not just the internal function — same discipline 1.6/6.6 already caught real gaps with).
   - **Critical real finding, found by accident and then deliberately reproduced (2026-07-28): real multi-turn Gemini tool-calling is broken on this machine's actual `Denario_env` today, independent of the API-key-format issue in 1.7.** A verification run accidentally used the real API key (popping an env var doesn't stop `KeyManager.get_keys_from_env()`'s internal `load_dotenv()` from reloading it from `.env`) and hit a real Gemini API error on the *second* tool call in one conversation: `"Function call is missing a thought_signature in functionCall parts"`. Confirmed this is the old library, not a bug in this ticket's code: the identical scenario, using a minimal standalone script (to avoid installing `cmbagent` into a throwaway venv) against the same real project, **fails on `langchain-google-genai==2.1.12`** (this machine's installed version) and **succeeds cleanly on `4.3.2`** (the isolated venv from ticket 1.7) — same real API key, same real question, same real Gemini model. The old library isn't correctly preserving Gemini's thought-signature metadata across a multi-turn tool-calling conversation.
