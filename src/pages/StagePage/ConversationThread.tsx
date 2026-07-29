@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import { EditorView } from 'codemirror';
-import { MergeView } from '@codemirror/merge';
+import { MergeViewDiff } from '../../components/molecules/MergeViewDiff/MergeViewDiff';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { startStage, stopStage } from '../../utils/stageRunner';
 import { api } from '../../api/client';
@@ -215,29 +214,6 @@ function ProposedRunAction({ stageId }: { stageId: StageId }) {
   );
 }
 
-// Read-only side-by-side diff, per ROADMAP.md 3.4/6.5's already-decided
-// choice of @codemirror/merge's MergeView (kept consistent with the Paper
-// editor's planned diff UI, rather than inventing a second diff component).
-function ProposedEditDiff({ oldContent, newContent }: { oldContent: string; newContent: string }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const readOnlyWrap = [EditorView.editable.of(false), EditorView.lineWrapping];
-    const view = new MergeView({
-      a: { doc: oldContent, extensions: readOnlyWrap },
-      b: { doc: newContent, extensions: readOnlyWrap },
-      parent: containerRef.current,
-    });
-    return () => view.destroy();
-    // Mount once per proposal — a new message id means a fresh diff, never
-    // re-synced into an already-mounted view.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return <div ref={containerRef} className={styles.proposedEditDiff} />;
-}
-
 // ROADMAP.md ticket 6.5 — proposes, never writes anything itself. Confirm
 // persists via the existing approveStage-with-edited-content backend route
 // (already there, just never called from the frontend before this ticket),
@@ -276,7 +252,7 @@ function ProposedEditAction({ stageId, oldContent, newContent, newStructured }: 
 
   return (
     <div className={styles.proposedEditPreview}>
-      <ProposedEditDiff oldContent={oldContent} newContent={newContent} />
+      <MergeViewDiff oldContent={oldContent} newContent={newContent} className={styles.proposedEditDiff} />
       <div className={styles.proposedActionRow}>
         <button className={styles.proposedActionConfirmBtn} onClick={handleConfirm} disabled={applying}>
           {applying ? 'Applying…' : `Apply edit to ${STAGE_CONFIG[stageId].label}`}

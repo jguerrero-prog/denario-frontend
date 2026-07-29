@@ -233,6 +233,21 @@ export const api = {
     });
   },
 
+  // ROADMAP.md ticket 3.4 — chat-driven full-document edits. Never
+  // writes/compiles anything on its own; the caller applies the change via
+  // the existing recompilePaper, after the researcher confirms the diff.
+  proposePaperEdit(projectId: string, texContent: string, instruction: string): Promise<{
+    available:   boolean;
+    reason:      string | null;
+    old_content: string | null;
+    new_content: string | null;
+  }> {
+    return req(`/projects/${projectId}/paper/propose-edit`, {
+      method: 'POST',
+      body: JSON.stringify({ tex_content: texContent, instruction }),
+    });
+  },
+
   // ── File URLs ────────────────────────────────────────────────────────────────
 
   fileUrl(projectId: string, filePath: string, cacheBust?: number): string {

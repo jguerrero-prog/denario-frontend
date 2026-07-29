@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Sidebar } from '../../components/organisms/Sidebar/Sidebar';
 import { LatexEditor, type LatexEditorDiagnostic } from '../../components/organisms/LatexEditor/LatexEditor';
+import { MergeViewDiff } from '../../components/molecules/MergeViewDiff/MergeViewDiff';
 import { usePipelineStore } from '../../store/pipelineStore';
 import { usePdfAvailability } from '../../hooks/usePdfAvailability';
 import { api } from '../../api/client';
@@ -54,6 +55,14 @@ export function PaperPage() {
   // needs a fresh instance instead.
   const [editorKey, setEditorKey] = useState(0);
 
+  // Ticket 3.4 — chat-driven full-document edits. No automated judge, same
+  // as 6.5/6.9: the diff + confirm/dismiss below IS the review.
+  const [instruction, setInstruction] = useState('');
+  const [proposing, setProposing] = useState(false);
+  const [proposal, setProposal] = useState<{ oldContent: string; newContent: string } | null>(null);
+  const [proposeError, setProposeError] = useState<string | null>(null);
+  const [applyingProposal, setApplyingProposal] = useState(false);
+
   useEffect(() => {
     if (result?.rawContent && texContent === null) setTexContent(result.rawContent);
   }, [result?.rawContent, texContent]);
@@ -91,6 +100,48 @@ export function PaperPage() {
     } finally {
       setFixing(false);
     }
+  }
+
+  async function handleProposeEdit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = instruction.trim();
+    if (!backendProjectId || texContent === null || !trimmed) return;
+    setProposing(true);
+    setProposeError(null);
+    try {
+      const res = await api.proposePaperEdit(backendProjectId, texContent, trimmed);
+      if (res.available && res.old_content !== null && res.new_content !== null) {
+        setProposal({ oldContent: res.old_content, newContent: res.new_content });
+      } else {
+        setProposeError(res.reason ?? "Couldn't propose an edit.");
+      }
+    } catch {
+      setProposeError("Sorry, I couldn't reach the backend just now.");
+    } finally {
+      setProposing(false);
+    }
+  }
+
+  async function handleConfirmProposal() {
+    if (!backendProjectId || !proposal) return;
+    setApplyingProposal(true);
+    try {
+      const res = await api.recompilePaper(backendProjectId, proposal.newContent);
+      setTexContent(proposal.newContent);
+      setEditorKey(k => k + 1);
+      setCompileErrors(res.errors);
+      setDiagnostics(res.diagnostics);
+      setXelatexAvailable(res.xelatex_available);
+      setCacheBust(res.compiled_at);
+      setProposal(null);
+      setInstruction('');
+    } finally {
+      setApplyingProposal(false);
+    }
+  }
+
+  function handleDismissProposal() {
+    setProposal(null);
   }
 
   if (!pipeline || !backendProjectId) {
@@ -143,17 +194,39 @@ export function PaperPage() {
               <LatexEditor key={editorKey} value={texContent} onChange={setTexContent} diagnostics={diagnostics} />
             </div>
 
-            {/* Static scaffolding per design (node 797:2152) — not wired to anything yet. */}
-            <form className={styles.aiBar} onSubmit={e => e.preventDefault()}>
-              <input
-                className={styles.aiBarInput}
-                placeholder="Ask for a suggestion, edit or structural change…"
-                disabled
-              />
-              <button type="submit" className={styles.aiBarSend} disabled aria-label="Send">
-                <SendIcon />
-              </button>
-            </form>
+            {/* Ticket 3.4 — chat-driven full-document edits. Design: node
+                797:2152; the input bar itself was static scaffolding until
+                now. */}
+            {proposal ? (
+              <div className={styles.proposePreview}>
+                <MergeViewDiff oldContent={proposal.oldContent} newContent={proposal.newContent} className={styles.proposeDiff} />
+                <div className={styles.proposeActionRow}>
+                  <button className={styles.proposeConfirmBtn} onClick={handleConfirmProposal} disabled={applyingProposal}>
+                    {applyingProposal ? 'Applying…' : 'Apply edit'}
+                  </button>
+                  <button className={styles.proposeDismissBtn} onClick={handleDismissProposal} disabled={applyingProposal}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <form className={styles.aiBar} onSubmit={handleProposeEdit}>
+                  <input
+                    className={styles.aiBarInput}
+                    placeholder="Ask for a suggestion, edit or structural change…"
+                    value={instruction}
+                    onChange={e => setInstruction(e.target.value)}
+                    disabled={proposing}
+                  />
+                  <button type="submit" className={styles.aiBarSend} disabled={proposing || !instruction.trim()} aria-label="Send">
+                    <SendIcon />
+                  </button>
+                </form>
+                {proposing && <p className={styles.proposeError}>Thinking…</p>}
+                {proposeError && <p className={styles.proposeError}>{proposeError}</p>}
+              </>
+            )}
           </div>
         </div>
 
