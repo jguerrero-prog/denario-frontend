@@ -70,7 +70,9 @@ export async function fetchMethodsLog(
     if (subTasks.length === 0) return METHODS_LOG_EMPTY;
 
     const planningRes = await fetch(api.fileUrl(backendId, 'method_generation_output/planning/chats/chat_output_planning.json'));
-    const planningLog = planningRes.ok ? parseMethodsPlanningLog(await planningRes.json()) : [];
+    const planningLog = planningRes.ok
+      ? parseMethodsPlanningLog(await planningRes.json(), ['planner', 'plan_reviewer'])
+      : [];
 
     const stepResults = await Promise.all(
       subTasks.map(async (task, i) => {
@@ -79,7 +81,7 @@ export async function fetchMethodsLog(
           api.fileUrl(backendId, `method_generation_output/control/chats/chat_output_researcher_step_${stepNum}.json`)
         );
         if (!stepRes.ok) return null;
-        return parseMethodsStepLog(await stepRes.json(), stepNum, task.sub_task);
+        return parseMethodsStepLog(await stepRes.json(), stepNum, task.sub_task, 'researcher');
       })
     );
     const executionLog = stepResults.filter((s): s is MethodsExecutionStep => s !== null);

@@ -183,28 +183,41 @@ interface RawCmbagentChatEntry {
   content: string | null;
 }
 
-export function parseMethodsPlanningLog(raw: RawCmbagentChatEntry[]): MethodsPlanningTurn[] {
+// Generalized (ticket 2.1) — `validSpeakers` is the caller's real two-voice
+// pair (Methods: planner/plan_reviewer; Idea-Rigorous: idea_maker/
+// idea_hater, ticket 2.2), not hardcoded here. Order in the raw chat
+// history is whatever cmbagent actually produced — this only filters to
+// the two real voices and drops orchestration bookkeeping entries.
+export function parseMethodsPlanningLog(
+  raw: RawCmbagentChatEntry[],
+  validSpeakers: readonly string[],
+): MethodsPlanningTurn[] {
   if (!Array.isArray(raw)) return [];
   return raw
     .filter((e): e is RawCmbagentChatEntry & { content: string } =>
-      (e.name === 'planner' || e.name === 'plan_reviewer') && !!e.content?.trim()
+      validSpeakers.includes(e.name) && !!e.content?.trim()
     )
-    .map(e => ({ speaker: e.name as 'planner' | 'plan_reviewer', content: e.content.trim() }));
+    .map(e => ({ speaker: e.name, content: e.content.trim() }));
 }
 
-// Each step's chat file is self-contained and always has exactly one
-// `researcher`-named entry with the real answer (confirmed against a real
-// run) — everything else in the file is the step briefing, the JSON-echoed
-// formatter output, save confirmations, and session bookkeeping.
+// Generalized (ticket 2.1) — each step's chat file is self-contained and
+// always has exactly one entry from the agent that actually narrated this
+// step (confirmed against a real Methods run: always `researcher`), but
+// which agent that is varies by stage — Idea-Rigorous's steps alternate
+// idea_maker/idea_hater per `final_plan.json`'s own `sub_task_agent` field
+// (ticket 2.2), not a single fixed name. The caller supplies which agent
+// this specific step's real answer should come from, rather than this
+// function assuming one name for every stage.
 export function parseMethodsStepLog(
   raw: RawCmbagentChatEntry[],
   step: number,
   title: string,
+  agentName: string,
 ): MethodsExecutionStep | null {
   if (!Array.isArray(raw)) return null;
-  const researcherEntry = raw.find(e => e.name === 'researcher' && e.content?.trim());
-  if (!researcherEntry?.content) return null;
-  return { step, title, content: researcherEntry.content.trim() };
+  const entry = raw.find(e => e.name === agentName && e.content?.trim());
+  if (!entry?.content) return null;
+  return { step, title, content: entry.content.trim() };
 }
 
 // The Methods (and Analysis) stage emits schema-constrained structured data —

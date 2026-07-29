@@ -98,20 +98,27 @@ export interface MethodSection {
   substeps: MethodSubStep[];
 }
 
-// Rigorous-track-only reasoning log — see REASONING_LOG_TICKETS.md. Two
-// structurally different sources, not one flat transcript like Idea's:
-// a short planner/plan_reviewer debate over the plan itself, then a
-// sequential list of steps where a single `researcher` agent executes each
-// planned sub-task in turn (no second voice, no critique).
+// Rigorous-track-only reasoning log shape — see REASONING_LOG_TICKETS.md.
+// Two structurally different sources, not one flat transcript like Idea's
+// Fast-track log: a short two-voice debate over the plan itself, then a
+// sequential list of steps where a single agent narrates each planned
+// sub-task in turn (no second voice, no critique). Despite the name, this
+// isn't Methods-exclusive (ticket 2.1 generalized it) — any stage whose
+// Rigorous track produces this shape reuses it as-is: Methods' own
+// planner/plan_reviewer debate + researcher steps, and Idea-Rigorous's
+// idea_maker/idea_hater debate + per-step agent (ticket 2.2, since
+// final_plan.json's own `sub_task_agent` field varies per step there,
+// unlike Methods' always-`researcher` steps). `speaker`/agent values are
+// real cmbagent agent names, not a fixed Methods-only pair.
 export interface MethodsPlanningTurn {
-  speaker: 'planner' | 'plan_reviewer';
+  speaker: string;
   content: string;
 }
 
 export interface MethodsExecutionStep {
   step: number;
   title: string;    // the plan's sub_task text for this step (final_plan.json)
-  content: string;  // the researcher agent's real markdown answer for this step
+  content: string;  // the executing agent's real markdown answer for this step
 }
 
 export interface MethodsResultData {
