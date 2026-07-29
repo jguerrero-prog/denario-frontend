@@ -46,7 +46,8 @@ export type SseEvent =
 // for v1 (resolved design) — just one status notice, then complete/error.
 export type AssistantProposedAction =
   | { type: 'run'; stage_id: string }
-  | { type: 'edit'; stage_id: string; old_content: string; new_content: string; new_structured: Record<string, unknown> | null };
+  | { type: 'edit'; stage_id: string; old_content: string; new_content: string; new_structured: Record<string, unknown> | null }
+  | { type: 'plot'; stage_id: string; plot_filename: string; old_plot_path: string; new_plot_path: string; description: string };
 
 export type AssistantSseEvent =
   | { type: 'status';   text: string }
@@ -179,6 +180,21 @@ export const api = {
 
   getStageResult(projectId: string, stageId: string): Promise<BackendStageResult> {
     return req(`/projects/${projectId}/stages/${stageId}/result`);
+  },
+
+  // ROADMAP.md ticket 6.9 — confirms a compose-bar-proposed plot
+  // regeneration. Analysis-only, matching approveStage's Methods-only
+  // edited_structured scoping (6.5) — a dedicated endpoint rather than
+  // overloading approveStage, since a plot isn't a whole-stage approval.
+  applyPlotRegeneration(
+    projectId:    string,
+    plotFilename: string,
+    newPlotPath:  string,
+  ): Promise<{ message: string }> {
+    return req(`/projects/${projectId}/stages/analysis/plots/${encodeURIComponent(plotFilename)}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ new_plot_path: newPlotPath }),
+    });
   },
 
   // ── Paper endpoints ──────────────────────────────────────────────────────────

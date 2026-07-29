@@ -289,6 +289,64 @@ function ProposedEditAction({ stageId, oldContent, newContent, newStructured }: 
   );
 }
 
+// ROADMAP.md ticket 6.9 — before/after image comparison, no automated
+// plot-judge (cmbagent's own evaluate_plots mechanism has a real gap —
+// see propose_plot_regeneration's docstring in api/runner.py). This
+// confirm/dismiss step IS the review for v1, by explicit user decision.
+function ProposedPlotRegenerationAction({
+  stageId, plotFilename, oldPlotPath, newPlotPath, description,
+}: { stageId: StageId; plotFilename: string; oldPlotPath: string; newPlotPath: string; description: string }) {
+  const [resolved, setResolved] = useState<'confirmed' | 'dismissed' | null>(null);
+  const [applying, setApplying] = useState(false);
+  const backendProjectId = usePipelineStore(s => s.backendProjectId);
+  const hydratePipeline = usePipelineStore(s => s.hydratePipeline);
+
+  if (resolved === 'confirmed') {
+    return <p className={styles.proposedActionResolved}>Applied the regenerated plot to {STAGE_CONFIG[stageId].label}.</p>;
+  }
+  if (resolved === 'dismissed') {
+    return <p className={styles.proposedActionResolved}>Dismissed.</p>;
+  }
+  if (!backendProjectId) return null; // shouldn't happen — the compose bar requires a loaded project
+
+  async function handleConfirm() {
+    if (!backendProjectId) return;
+    setApplying(true);
+    try {
+      await api.applyPlotRegeneration(backendProjectId, plotFilename, newPlotPath);
+      const fresh = await api.getProject(backendProjectId);
+      hydratePipeline(fresh);
+      setResolved('confirmed');
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  return (
+    <div className={styles.proposedPlotPreview}>
+      <div className={styles.proposedPlotRow}>
+        <div className={styles.proposedPlotColumn}>
+          <span className={styles.proposedPlotLabel}>Current</span>
+          <img className={styles.proposedPlotImage} src={api.fileUrl(backendProjectId, oldPlotPath)} alt="Current plot" />
+        </div>
+        <div className={styles.proposedPlotColumn}>
+          <span className={styles.proposedPlotLabel}>Proposed</span>
+          <img className={styles.proposedPlotImage} src={api.fileUrl(backendProjectId, newPlotPath)} alt="Proposed plot" />
+        </div>
+      </div>
+      {description && <p className={styles.proposedPlotDescription}>{description}</p>}
+      <div className={styles.proposedActionRow}>
+        <button className={styles.proposedActionConfirmBtn} onClick={handleConfirm} disabled={applying}>
+          {applying ? 'Applying…' : 'Use this plot'}
+        </button>
+        <button className={styles.proposedActionDismissBtn} onClick={() => setResolved('dismissed')} disabled={applying}>
+          Dismiss
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function DenarioBubble({ message, children }: { message: Message; children?: React.ReactNode }) {
   const timeLabel = formatTime(message.timestamp);
   return (
@@ -307,6 +365,15 @@ function DenarioBubble({ message, children }: { message: Message; children?: Rea
           oldContent={message.proposedAction.oldContent}
           newContent={message.proposedAction.newContent}
           newStructured={message.proposedAction.newStructured}
+        />
+      )}
+      {message.proposedAction?.type === 'plot' && (
+        <ProposedPlotRegenerationAction
+          stageId={message.proposedAction.stageId}
+          plotFilename={message.proposedAction.plotFilename}
+          oldPlotPath={message.proposedAction.oldPlotPath}
+          newPlotPath={message.proposedAction.newPlotPath}
+          description={message.proposedAction.description}
         />
       )}
       {children}
@@ -709,7 +776,9 @@ function ComposeBar({ stageId }: { stageId: StageId }) {
             proposedAction: pa
               ? pa.type === 'run'
                 ? { type: 'run', stageId: pa.stage_id as StageId }
-                : { type: 'edit', stageId: pa.stage_id as StageId, oldContent: pa.old_content, newContent: pa.new_content, newStructured: pa.new_structured }
+                : pa.type === 'edit'
+                ? { type: 'edit', stageId: pa.stage_id as StageId, oldContent: pa.old_content, newContent: pa.new_content, newStructured: pa.new_structured }
+                : { type: 'plot', stageId: pa.stage_id as StageId, plotFilename: pa.plot_filename, oldPlotPath: pa.old_plot_path, newPlotPath: pa.new_plot_path, description: pa.description }
               : undefined,
           });
         } else if (event.type === 'error') {
