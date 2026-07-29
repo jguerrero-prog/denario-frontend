@@ -29,15 +29,13 @@ One consolidated, prioritized view of everything scoped across the planning docs
 
 ## What's actually left (last audited 2026-07-28)
 
-Epic 1's Phase 0 quick wins (1.1/1.2/1.3/1.4) and all of Epic 6 (6.2–6.10)
-turned out to already be implemented/shipped by the time this was
-re-audited — this table replaces the older, now-stale "Recommended build
-sequence" phasing, which still listed them as pending.
+Epic 1's Phase 0 quick wins (1.1/1.2/1.3/1.4), all of Epic 6 (6.2–6.10),
+and Epic 2 in full (2.1/2.2) are now shipped — this table replaces the
+older, now-stale "Recommended build sequence" phasing, which still
+listed several of these as pending.
 
 | Ticket | SP | Status/gate |
 |--------|----|------|
-| 2.1 Harden & generalize the reasoning-log renderer | 3 | Ready, no blockers — foundational, unblocks 2.2 |
-| 2.2 Idea adversarial log (Rigorous track) | 3 | Ready (once 2.1 lands), but blocked on running a real Rigorous-track Idea generation to verify file paths against |
 | 3.4 Chat-driven full-document edits | 5 | Was gated on 6.3 existing — 6.3 has since shipped; re-check whether this is actually unblocked now |
 | 4.1 Preserve scripts/data + plot→script map | 5 (needs re-estimate) | Paused — hard pivot decided (live run-ledger), deliberately not started; foundational, blocks 4.2/4.3/4.4 |
 | 4.2 Interactive companion render (backend) | 8 | Blocked on 4.1 |
