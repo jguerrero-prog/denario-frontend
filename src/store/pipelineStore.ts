@@ -4,7 +4,7 @@ import type { BackendProject } from '../api/client';
 import { MOCK_PIPELINE } from './mockPipeline';
 import { nextStage, STAGE_CONFIG, STAGE_ORDER } from '../config/stageConfig';
 import { parseBackendResult } from '../utils/parsers';
-import { buildMockResult, fetchIdeaTranscript, fetchMethodsLog, fetchSearchedPapers } from '../utils/stageRunner';
+import { buildMockResult, fetchIdeaTranscript, fetchIdeaLog, fetchMethodsLog, fetchSearchedPapers } from '../utils/stageRunner';
 
 interface PipelineStore {
   pipeline: Pipeline | null;
@@ -26,6 +26,7 @@ interface PipelineStore {
   setStageParam: (stageId: StageId, key: string, value: string | number | boolean) => void;
   setStageResult: (stageId: StageId, result: StageResult) => void;
   setIdeaTranscript: (transcript: IdeaTranscriptRound[]) => void;
+  setIdeaLog: (planningLog: MethodsPlanningTurn[], executionLog: MethodsExecutionStep[]) => void;
   setMethodsLog: (planningLog: MethodsPlanningTurn[], executionLog: MethodsExecutionStep[]) => void;
   setLiteratureSearchedPapers: (papers: SearchedPaper[]) => void;
   approveStage: (stageId: StageId) => void;  // completes stage + unlocks next
@@ -302,6 +303,13 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       fetchIdeaTranscript(id).then(transcript => {
         if (transcript.length > 0) get().setIdeaTranscript(transcript);
       });
+      // Ticket 2.2 — mutually exclusive with the Fast-track transcript
+      // above in practice (a project has idea.log XOR the Rigorous JSON
+      // files), so firing both fetches is harmless: at most one resolves
+      // with real content.
+      fetchIdeaLog(id).then(({ planningLog, executionLog }) => {
+        if (planningLog.length > 0 || executionLog.length > 0) get().setIdeaLog(planningLog, executionLog);
+      });
     }
 
     if (updatedStages.methods.status === 'complete' && updatedStages.methods.result) {
@@ -375,6 +383,22 @@ export const usePipelineStore = create<PipelineStore>((set, get) => ({
       return {
         pipeline: updateStage(pipeline, 'idea', {
           result: { ...stage.result, stageData: { ...stageData, transcript } },
+        }),
+      };
+    }),
+
+  // Ticket 2.2 — same shape as setMethodsLog, but for Idea's Rigorous-track
+  // log (idea.log/setIdeaTranscript above is the Fast-track counterpart;
+  // the two are mutually exclusive in practice, never both populated for
+  // the same project).
+  setIdeaLog: (planningLog, executionLog) =>
+    set(({ pipeline }) => {
+      const stage = pipeline?.stages.idea;
+      if (!pipeline || !stage?.result) return {};
+      const stageData = stage.result.stageData as IdeaResultData;
+      return {
+        pipeline: updateStage(pipeline, 'idea', {
+          result: { ...stage.result, stageData: { ...stageData, planningLog, executionLog } },
         }),
       };
     }),

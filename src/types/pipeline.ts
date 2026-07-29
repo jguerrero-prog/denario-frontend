@@ -78,6 +78,15 @@ export interface IdeaResultData {
   transcript: IdeaTranscriptRound[];
   stageOutput: string;
   meta: { track: string; iterations: number; duration: string };
+  // Rigorous-track only (ticket 2.2) — mutually exclusive with `transcript`
+  // in practice: idea.log (Fast track) produces `transcript`, a Rigorous
+  // run produces this instead. Reuses MethodsPlanningTurn/
+  // MethodsExecutionStep as-is (generalized in ticket 2.1) rather than
+  // separate Idea-specific types — same real shape, confirmed against a
+  // real Rigorous-track Idea run (planner/plan_reviewer planning debate,
+  // idea_maker/idea_hater alternating per execution step).
+  planningLog?: MethodsPlanningTurn[];
+  executionLog?: MethodsExecutionStep[];
 }
 
 export interface MethodPoint {

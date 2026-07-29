@@ -1,6 +1,7 @@
 import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { useHydratedPipeline } from '../../hooks/useHydratedPipeline';
 import { IdeaTranscriptCard } from '../../components/molecules/IdeaTranscript/IdeaTranscript';
+import { MethodsLogCard } from '../../components/molecules/MethodsLog/MethodsLog';
 import type { IdeaResultData } from '../../types/pipeline';
 import styles from './IdeaFullPage.module.css';
 
@@ -130,6 +131,25 @@ export function IdeaFullPage() {
                 defaultCollapsed={true}
                 headerRight={
                   <span>{data.transcript[data.transcript.length - 1].round} rounds</span>
+                }
+              />
+            </div>
+          )}
+
+          {/* Rigorous-track Reasoning Log (ticket 2.2) — mutually exclusive
+              with the Fast-track transcript above; reuses MethodsLogCard
+              as-is (generalized in ticket 2.1) with an overridden title so
+              it doesn't misleadingly say "Methods". */}
+          {((data?.planningLog?.length ?? 0) > 0 || (data?.executionLog?.length ?? 0) > 0) && (
+            <div className={styles.section}>
+              <p className={styles.sectionLabel}>Reasoning Log</p>
+              <MethodsLogCard
+                title="Idea Reasoning Log"
+                planningLog={data?.planningLog ?? []}
+                executionLog={data?.executionLog ?? []}
+                defaultCollapsed={true}
+                headerRight={
+                  <span>{data?.executionLog?.length ?? 0} step{(data?.executionLog?.length ?? 0) === 1 ? '' : 's'}</span>
                 }
               />
             </div>

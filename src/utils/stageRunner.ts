@@ -92,6 +92,53 @@ export async function fetchMethodsLog(
   }
 }
 
+// Idea's Rigorous-track reasoning log (ticket 2.2) — idea.log (fetched by
+// fetchIdeaTranscript above) is Fast-track only; a Rigorous run produces
+// this shape instead, structurally identical to Methods' (same
+// planning_and_control_context_carryover call under the hood) but with one
+// real difference confirmed against an actual run: Methods' execution
+// steps are always narrated by one fixed agent ('researcher'), but Idea's
+// alternate per step (idea_maker/idea_hater) per the plan's own
+// `sub_task_agent` field — so the step filename itself varies
+// (chat_output_idea_maker_step_1.json, chat_output_idea_hater_step_2.json,
+// ...), unlike Methods' constant chat_output_researcher_step_N.json.
+const IDEA_LOG_EMPTY = { planningLog: [] as MethodsPlanningTurn[], executionLog: [] as MethodsExecutionStep[] };
+
+export async function fetchIdeaLog(
+  backendId: string,
+): Promise<{ planningLog: MethodsPlanningTurn[]; executionLog: MethodsExecutionStep[] }> {
+  try {
+    const planRes = await fetch(api.fileUrl(backendId, 'idea_generation_output/planning/final_plan.json'));
+    if (!planRes.ok) return IDEA_LOG_EMPTY;
+    const finalPlan = await planRes.json();
+    const subTasks: { sub_task: string; sub_task_agent: string }[] =
+      Array.isArray(finalPlan?.sub_tasks) ? finalPlan.sub_tasks : [];
+    if (subTasks.length === 0) return IDEA_LOG_EMPTY;
+
+    const planningRes = await fetch(api.fileUrl(backendId, 'idea_generation_output/planning/chats/chat_output_planning.json'));
+    const planningLog = planningRes.ok
+      ? parseMethodsPlanningLog(await planningRes.json(), ['planner', 'plan_reviewer'])
+      : [];
+
+    const stepResults = await Promise.all(
+      subTasks.map(async (task, i) => {
+        const stepNum = i + 1;
+        const agent = task.sub_task_agent;
+        const stepRes = await fetch(
+          api.fileUrl(backendId, `idea_generation_output/control/chats/chat_output_${agent}_step_${stepNum}.json`)
+        );
+        if (!stepRes.ok) return null;
+        return parseMethodsStepLog(await stepRes.json(), stepNum, task.sub_task, agent);
+      })
+    );
+    const executionLog = stepResults.filter((s): s is MethodsExecutionStep => s !== null);
+
+    return { planningLog, executionLog };
+  } catch {
+    return IDEA_LOG_EMPTY;
+  }
+}
+
 // Stages with a real per-agent model choice — see configStore's
 // ModelOverrideStage / ROADMAP.md ticket 1.6.
 const MODEL_OVERRIDE_STAGES: ModelOverrideStage[] = ['idea', 'methods', 'analysis', 'paper'];
@@ -494,6 +541,13 @@ function _onStageComplete(
     if (backendId) {
       fetchIdeaTranscript(backendId).then(transcript => {
         if (transcript.length > 0) usePipelineStore.getState().setIdeaTranscript(transcript);
+      });
+      // Ticket 2.2 — Rigorous-track counterpart to the Fast-track fetch
+      // above; mutually exclusive in practice, so firing both is harmless.
+      fetchIdeaLog(backendId).then(({ planningLog, executionLog }) => {
+        if (planningLog.length > 0 || executionLog.length > 0) {
+          usePipelineStore.getState().setIdeaLog(planningLog, executionLog);
+        }
       });
     }
   }
