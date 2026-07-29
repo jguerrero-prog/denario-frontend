@@ -30,13 +30,12 @@ One consolidated, prioritized view of everything scoped across the planning docs
 ## What's actually left (last audited 2026-07-28)
 
 Epic 1's Phase 0 quick wins (1.1/1.2/1.3/1.4), all of Epic 6 (6.2–6.10),
-and Epic 2 in full (2.1/2.2) are now shipped — this table replaces the
-older, now-stale "Recommended build sequence" phasing, which still
+Epic 2 in full (2.1/2.2), and 3.4 are now shipped — this table replaces
+the older, now-stale "Recommended build sequence" phasing, which still
 listed several of these as pending.
 
 | Ticket | SP | Status/gate |
 |--------|----|------|
-| 3.4 Chat-driven full-document edits | 5 | Was gated on 6.3 existing — 6.3 has since shipped; re-check whether this is actually unblocked now |
 | 4.1 Preserve scripts/data + plot→script map | 5 (needs re-estimate) | Paused — hard pivot decided (live run-ledger), deliberately not started; foundational, blocks 4.2/4.3/4.4 |
 | 4.2 Interactive companion render (backend) | 8 | Blocked on 4.1 |
 | 4.3 "Interact with it" popup: live controls + 3D | 8 | Blocked on 4.1/4.2 |
@@ -179,14 +178,14 @@ listed several of these as pending.
 - **Verified:** three mocked scenarios (this dev machine has neither xelatex nor API keys) — a real missing-credentials failure degrading honestly (found that `ChatGoogleGenerativeAI` fails at *construction* time with no key, not lazily at `.invoke()`), a fix-succeeds-on-attempt-1 retry loop, and giving up cleanly after 3 failed attempts — plus the real endpoint via TestClient and the full UI flow via Playwright (button visibility, editor content swap on success).
 
 ### 3.4 Chat-driven full-document edits
-- **Status:** Blocked · **SP:** 5 · **Needs design:** No (uses 3.2's editor) · **Hard pivot:** decided
+- **Status:** **Shipped (2026-07-28)** · **SP:** 5 · **Needs design:** No (uses 3.2's editor) · **Hard pivot:** decided (see below — the original 6.3 dependency was also reconsidered)
 - **Description:** A chat instruction targeting the Paper ("make the abstract punchier", "add the booktabs package and reformat this table", "add a Limitations section") sends the whole current `.tex` + instruction to the LLM and gets a whole new `.tex` back, shown as a diff, applied on confirm.
-- **Dependencies:** 3.2, 6.3 (the classification node)
-- **User impact:** Content *and* structural manuscript edits from plain-language requests, with a diff to review before anything changes.
-- **Blockers:** 3.2 (needs the editor), 6.3 (needs the classifier to exist)
-- **Files likely touched:** new `api/routes/paper.py` edit endpoint, `denario/langgraph_agents/` (classifier tool from 6.3), `src/components/organisms/LatexEditor/`; new dep `@codemirror/merge`
-- **Claude suggestion:** Full-document rewrite, not diff/patch — a manuscript is small enough that whole-file round-trips avoid the fragile substring-matching that made OpenPrism/assistant-ui edits unreliable. Use `@codemirror/merge`'s `MergeView` for the preview; validate the LLM output is well-formed LaTeX (balanced `\begin`/`\end`, has `\documentclass`) before it can overwrite the buffer.
-- **Hard pivot (decided):** the editor's raw `.tex` buffer is the source of truth once the editor ships; this **supersedes** the old structured-field section-rewrite approach (was Compose Bar 6.8).
+- **The stated dependency on 6.3 (the shared classification node) was re-examined and found to point at a worse design, not just a stale reference.** 6.3's shared compose bar lives on `StagePage.tsx`; the editor/PDF/diff all live on `PaperPage.tsx`, ticket 3.5's *separate* standalone workspace route. Routing through the shared assistant would mean the diff appears in a conversation thread on a different screen than the document being edited. Surfaced this to the user before writing code (a real architecture fork, not a coin-flip) — confirmed: build a dedicated single-shot endpoint instead, matching how `/paper/auto-fix` already works, triggered from `PaperPage`'s own existing "Ask for a suggestion" bar (previously static scaffolding, explicitly reserved for this feature per its own code comment).
+- **Also found while investigating: no new backend edit endpoint was actually needed for the *write* step**, contradicting the ticket's own file estimate. `recompile_manuscript` (already live, backs the existing Recompile button) already persists `.tex` content to disk and compiles it — confirming write paths matched exactly (`_read_result`'s read candidates and `recompile_manuscript`'s write target both resolve to the same `project_dir/manuscript.tex`, verified by reading both, not assumed). A confirmed edit just calls the existing `api.recompilePaper`, same as clicking Save.
+- **New, deliberately narrow addition**: `propose_manuscript_edit` in `denario/paper_agents/manuscript_edit.py` — same "quick single-shot LLM call" shape as 3.3's auto-fix and 6.5's propose_edit, never calling `recompile_manuscript` itself (unlike auto-fix, which is safe to auto-save because it's correcting an objective compile error — this follows a subjective freeform instruction, so it only proposes). New `POST .../paper/propose-edit` route, no `_compile_lock` needed since nothing is written or compiled.
+- **`MergeViewDiff` extracted into a shared component** (`src/components/molecules/MergeViewDiff/`) once this became the second consumer needing the exact same CodeMirror `MergeView` mount/destroy logic as 6.5's Methods diff — avoided a third copy-paste of the same setup code.
+- **Verified with a real LLM call** against a real `.tex` document (not mocked): asked to make an abstract punchier, got back the full document with only the abstract rewritten — title, structure, `\documentclass`, and the Introduction section came back byte-identical. Hit a real, external blocker mid-verification (the user's Gemini monthly spend cap was exhausted from this session's heavy real-LLM usage) — surfaced immediately rather than silently falling back to mocks; the user raised the cap and verification completed for real. `tsc -b --noEmit` clean on the frontend. Not yet visually verified in a browser.
+- **Files touched:** `api/routes/paper.py`, `denario/paper_agents/manuscript_edit.py`, `src/api/client.ts`, `src/pages/PaperPage/PaperPage.tsx` + `.module.css`, `src/components/molecules/MergeViewDiff/` (new), `src/pages/StagePage/ConversationThread.tsx` (updated to use the extracted shared component instead of its own private copy).
 
 ### 3.5 Standalone "Paper" workspace (new sidebar nav destination)
 - **Status:** Shipped (2026-07-25/27) · **SP:** — · **Needs design:** No · **Hard pivot:** resolved
