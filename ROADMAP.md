@@ -46,6 +46,7 @@ sequence" phasing, which still listed them as pending.
 | 4.5 Standalone "Lab" workspace | needs estimate | Ready — placeholder already shipped |
 | 5.2 "Related Literature" trail | 3 | Mostly shipped — round-by-round search trail explicitly deferred/optional |
 | 5.3 Move Literature Review earlier (stage 6 → 3) | 3 | Ready mechanically, gated on a hard-pivot decision (reorders every stage's lock/unlock logic) |
+| Epic 7 Lab page connector suite | — | Exploratory, no tickets yet — vision + connector-class framing only. Decide together with 4.5 (same page) |
 
 ---
 
@@ -374,6 +375,54 @@ sequence" phasing, which still listed them as pending.
 
 ---
 
+## Epic 7 — Lab Page: Research Tool Connectors
+*Give researchers a suite of real tools — data visualization, model viewing, protein folding, galactic dynamics — not just pipeline outputs.*
+
+> **Status: EXPLORATORY — vision stage, not ticket-ready.** This is a step earlier than Epic 6's pause: there are no tickets here yet, just a recorded direction, a structural framing, and one evaluated candidate. Nothing to schedule.
+
+### Recorded decision — local-first / BYO
+Connectors point at the researcher's **own** licensed tools, credentials, and compute. Denario never hosts, bundles, or brokers third-party licensed software. This follows directly from `CLAUDE.md`'s existing principle (*"every output lives on the researcher's local drive. No cloud silos"*) — and it's what makes licensed scientific software tractable at all, since each researcher exercises their own institution's rights rather than Denario needing to acquire redistribution rights it can't get.
+
+### Connector classes — not all connectors cost the same
+The useful structural finding from the Agent Rosetta investigation: candidates fall into classes with very different integration costs, and it's worth knowing which class a candidate is *before* evaluating it.
+
+| Class | Examples | What it needs | Cost |
+|-------|----------|---------------|------|
+| **A — In-browser viewers** | 3D molecule viewer, interactive plot explorer, galactic dynamics renderer | Client-side rendering only | **Cheap** — no backend compute, instant feedback |
+| **B — Data / lookup connectors** | PDB fetch, arXiv, Semantic Scholar | A read-only API call | **Cheap** — Denario already has arXiv/Semantic Scholar pieces |
+| **C — Local compute** | Denario's own Analysis stage | Local execution + artifact handling | **Medium** — already exists, this is what Analysis is |
+| **D — Remote HPC jobs** | Agent Rosetta | Async job submission, polling, artifact rendering, credential handling | **Expensive** — infrastructure Denario doesn't have |
+
+**Recommendation: start at A/B.** Class D requires building an entire async job-orchestration surface before you'd learn what the lab page should even be.
+
+### Relationship to ticket 4.5 — the container already exists
+**The lab page is not hypothetical: `/lab` and `src/pages/LabPage/` shipped as a placeholder on 2026-07-24 (ticket 4.5).** The division of labour between that ticket and this epic:
+
+- **4.5 is the container** — the `/lab` route, its layout, and the still-open scope decision (cross-project data-exploration space vs. a deep-link into the current project's Analysis stage).
+- **Epic 7 is what populates it** — the connector suite described here.
+
+They must be decided together, not separately. Note also that "data visualizations" in this vision is substantially **Epic 4** already (4.2/4.3's interactive Plotly with real parameter controls and 3D) — so the first real contents of the lab page are likely Epic 4's output surfaced through 4.5, *not* a new connector. Third-party tool connectors (protein folding, galactic dynamics) come after that. Deciding this deliberately avoids building the same thing twice.
+
+### Evaluated candidate — Agent Rosetta (`PolymathicAI/agent-rosetta`)
+**Verdict: not connector #1.** An LLM agent that drives protein design via RosettaScripts. Investigated 2026-07-28 against real source, license text, and the GitHub API. Three independent blockers:
+
+1. **Paper artifact, not software.** 7 commits, 1 contributor, 2 stars, no releases, no PyPI package, untouched since its 2026-07-05 code drop. The paper (arXiv 2603.15952) is titled "*A Case Study*." Integrating means adopting a permanent fork with no upstream.
+2. **Not connector-shaped.** CLI-only, no public API. Crashes outside a git checkout (`git rev-parse` in `get_root_dir()`). Its config loader writes API keys into `os.environ` process-wide — **would clobber cmbagent's and LangGraph's credentials** if imported in-process. Execution is fully synchronous (`sbatch --wait`), up to ~7 hours blocking, needing ≥130 MPI ranks, a CUDA GPU for ESMFold, and a self-compiled Rosetta. Its `cmd.sh` hardcodes the Flatiron/Simons Lmod module stack.
+3. **Rosetta licensing** — the repo's MIT license covers only the wrapper. Rosetta's own grant is *"solely for internal Non-Commercial purposes,"* no sublicensing, redistribution barred. Precedent: even **Levitate** (the Commons' own cloud Rosetta) requires every customer to hold their own UW license, and **ROSIE** (the one free Rosetta web server) is run by the Commons themselves.
+
+**What the BYO decision changes:** blocker 3 largely dissolves — if the researcher supplies their own licensed Rosetta build and their own cluster, they're exercising their own internal-use rights and Denario brokers nothing. Blockers 1 and 2 remain.
+
+**Organizational advantage worth knowing:** Polymathic AI is Simons Foundation / Flatiron. Co-authors **P. Douglas Renfrew** and **Vikram Mulligan** co-head Flatiron's Biomolecular Design group, and Renfrew is listed on Rosetta Commons' member-labs page under Simons Foundation. The hardcoded Lmod stack means this was built for infrastructure the org already runs. This is an in-house conversation, not a vendor negotiation.
+
+**If it's ever revisited:** it's a Class D connector — the job-submission/polling infrastructure has to exist first. Its `trajectory.json` schema (pydantic-serialized agent transcript with per-step state, reasoning, actions, and scored design ensembles) is genuinely well-shaped for rendering in a web UI, and would be the thing to build against.
+
+### Cheap next steps (none are engineering)
+- **Talk to Renfrew and Mulligan.** Colleagues, co-authors, Rosetta Commons member lab — a short conversation could reshape this entire plan and costs nothing.
+- **Ask them about Masala** (`flatironinstitute/masala_public`) — an AGPL, licensing-clean biomolecular modeling suite from the same Flatiron group. Very early (created June 2025) and not a Rosetta replacement today, but it signals where they're heading.
+- **If a spike is ever wanted:** `configs/hello-rosetta.yaml` runs a sandbox mode that short-circuits before touching any Rosetta binary — one LLM call, seconds, no Rosetta install. A cheap way to prove a connector contract end-to-end without touching the HPC problem.
+
+---
+
 ## Appendix — Decisions & investigations (condensed)
 
 Verdicts from this and the prior session, kept so they aren't relitigated. Full detail lives in `docs/archive/` and git history.
@@ -382,6 +431,7 @@ Verdicts from this and the prior session, kept so they aren't relitigated. Full 
 - **ClaudePrism (`delibae/claude-prism`)** — *not forked, real MIT-licensed offline-first Tauri app, mined for reference (2026-07-28).* Three takeaways: (1) **Tectonic as a real answer to "no LaTeX toolchain installed"** — it embeds the `tectonic` Rust crate in-process, but that's not the adoptable shape; the standalone `tectonic` CLI binary (a separate public tool) could be shelled out to exactly like `xelatex` is today, no Rust/Tauri needed, and since Denario already runs compiles as fresh subprocesses (not a long-lived process), it wouldn't hit the in-process font-cache bug that forced ClaudePrism to re-exec its own binary per compile (`latex.rs:405-419`, verified directly). Real caveat: not actually offline on first use — `config.default_bundle()` fetches a TeX bundle over the network the first time (`latex.rs:372`); worth a research spike before any adoption, not a copy-paste. (2) **Tool-call visibility widgets** (live spinner per tool while running, `tool-widgets.tsx`) — a concrete pattern for the "one generic status" design 6.3 already settled on. (3) **Their auto-apply-then-revert edit flow is the opposite of Denario's "propose, never auto-apply" stance**, not a smoother version of the same thing — it only works safely because every edit is bracketed by a git-based history snapshot (`git2`, vendored libgit2, separate `.claudeprism/history.git` git-dir) as an after-the-fact safety net. Their git history answers "what changed, can I undo it," not "is stage N's output still consistent with stage M's current content" — confirmed it doesn't substitute for 6.6's minimal revision-counter fix, which stays the right-sized answer for that specific problem.
 - **Dash by Plotly** — *not adopted.* A separate Python web-app framework, not an embeddable component; its charts use the same `plotly.js` we'll use directly; the good embedding path is paywalled (Dash Enterprise). `dash-daq` kept as UX reference for 4.3's controls.
 - **open-science ("Claude Science" clone)** — *not adopted.* ~18-day-old, effectively one-author Tauri desktop app; architecturally incompatible with our web-app model. One strong takeaway: its two-ledger provenance pattern (artifact ledger + run ledger joined by `run_id`, `pip freeze`-level env capture) → informs 4.1's hard-pivot choice, and we're better-positioned than they are (we control script execution, so we can capture the link with certainty).
+- **Agent Rosetta (`PolymathicAI/agent-rosetta`)** — *evaluated as a lab-page connector, not adopted (2026-07-28).* Three blockers: a paper artifact (7 commits, 1 contributor, no releases/PyPI, untouched since its code drop — arXiv 2603.15952 is titled "A Case Study"); not connector-shaped (CLI-only, crashes outside a git checkout, writes API keys into `os.environ` process-wide which would clobber cmbagent/LangGraph credentials, `sbatch --wait` blocking for ~hours, needs ≥130 MPI ranks + a CUDA GPU + a self-compiled Rosetta, and hardcodes the Flatiron Lmod stack); and Rosetta's own license grants use *"solely for internal Non-Commercial purposes"* with no sublicensing — the MIT badge covers only the wrapper. **Denario's local-first/BYO model dissolves the licensing blocker** (each researcher uses their own licensed build and cluster; Denario brokers nothing), but the other two stand. Organizational advantage worth using: the authors (Renfrew, Mulligan) are Flatiron colleagues in a Rosetta Commons member lab. See Epic 7 for the full write-up and the connector-class framing it produced.
 - **AG2 vs LangGraph** — LangGraph chosen for the assistant engine (single-agent + human-in-the-loop fits; already vendored).
 - **A2UI** — not applicable to the visualization feature (no chart component; solves dynamic agent-composed UI, which this feature doesn't have).
 - **cmbagent raster wall** — auto-detecting/serving interactive artifacts is impossible without editing the vendored cmbagent package; hence the per-plot on-demand approach in Epic 4.
